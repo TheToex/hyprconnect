@@ -157,6 +157,7 @@ impl Input {
             self.key_event(*m, true)?;
         }
         self.key_event(k, true)?;
+        std::thread::sleep(std::time::Duration::from_millis(6));
         self.key_event(k, false)?;
         for m in ms.iter().rev() {
             self.key_event(*m, false)?;
@@ -222,6 +223,7 @@ impl Input {
             self.key_event(Key::KEY_LEFTSHIFT, true)?;
         }
         self.key_event(key, true)?;
+        std::thread::sleep(std::time::Duration::from_millis(6));
         self.key_event(key, false)?;
         if shift {
             self.key_event(Key::KEY_LEFTSHIFT, false)?;

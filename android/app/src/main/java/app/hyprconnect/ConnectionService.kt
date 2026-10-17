@@ -31,7 +31,7 @@ class ConnectionService : Service() {
         val n = Notification.Builder(this, "link")
             .setContentTitle("HyprConnect")
             .setContentText("Linked to ${Hub.store.pcName}")
-            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(open)
             .setOngoing(true)
             .build()

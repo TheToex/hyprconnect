@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -38,6 +39,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
@@ -47,6 +50,7 @@ import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -1156,8 +1160,10 @@ private suspend fun PointerInputScope.trackpadGesture(sensitivity: Float) = awai
 @Composable
 fun TrackpadTab() {
     val ctx = LocalContext.current
-    var liveText by remember { mutableStateOf("") }
     val sens = Hub.store.pointerSens
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var keyboardBuffer by remember { mutableStateOf("") }
 
     Column(
         Modifier.fillMaxSize().padding(12.dp),
@@ -1236,28 +1242,20 @@ fun TrackpadTab() {
             ) { Text("Esc", color = MochaText, fontSize = 11.sp) }
 
             OutlinedButton(
+                onClick = { Hub.key("space"); Haptics.click(ctx) },
+                modifier = Modifier.weight(1.1f),
+                contentPadding = PaddingValues(2.dp),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, MochaSurface0)
+            ) { Text("Space", color = MochaText, fontSize = 11.sp) }
+
+            OutlinedButton(
                 onClick = { Hub.key("backspace"); Haptics.click(ctx) },
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(2.dp),
                 shape = RoundedCornerShape(8.dp),
                 border = BorderStroke(1.dp, MochaSurface0)
             ) { Text("⌫", color = MochaText, fontSize = 12.sp) }
-
-            Button(
-                onClick = {
-                    if (liveText.isNotBlank()) {
-                        Hub.text(liveText)
-                        liveText = ""
-                    } else {
-                        Hub.key("enter")
-                    }
-                    Haptics.click(ctx)
-                },
-                modifier = Modifier.weight(1.3f),
-                contentPadding = PaddingValues(2.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = HyprSky, contentColor = MochaBackground)
-            ) { Text("Send ↵", fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         }
 
         // Shortcut Chips
@@ -1287,41 +1285,60 @@ fun TrackpadTab() {
             }
         }
 
-        // Remote Typing Input Box
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = liveText,
-                onValueChange = { liveText = it },
-                singleLine = true,
-                placeholder = { Text("Type text to send to PC...", fontSize = 13.sp) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(10.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(onSend = {
-                    if (liveText.isNotBlank()) {
-                        Hub.text(liveText)
-                        liveText = ""
-                    } else {
-                        Hub.key("enter")
-                    }
-                    Haptics.click(ctx)
-                }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = HyprSky,
-                    unfocusedBorderColor = MochaSurface0
-                )
-            )
+        // Hidden input to capture soft keyboard typing and forward live to laptop
+        BasicTextField(
+            value = keyboardBuffer,
+            onValueChange = { next ->
+                if (next.length > keyboardBuffer.length) {
+                    val added = next.substring(keyboardBuffer.length)
+                    Hub.text(added)
+                } else if (next.length < keyboardBuffer.length) {
+                    val deleted = keyboardBuffer.length - next.length
+                    repeat(deleted) { Hub.key("backspace") }
+                }
+                keyboardBuffer = if (next.length > 50) next.takeLast(10) else next
+            },
+            modifier = Modifier.size(1.dp).focusRequester(focusRequester),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = {
+                Hub.key("enter")
+                Haptics.click(ctx)
+            })
+        )
 
-            if (liveText.isNotEmpty()) {
-                OutlinedButton(
-                    onClick = { liveText = "" },
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, MochaSurface0),
-                    contentPadding = PaddingValues(horizontal = 10.dp)
-                ) { Text("Clear", fontSize = 11.sp, color = MochaSubtext) }
+        // Bottom Controls: Keyboard soft trigger + Blue Enter Action
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = {
+                    focusRequester.requestFocus()
+                    keyboardController?.show()
+                    Haptics.click(ctx)
+                },
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MochaSurface0, contentColor = MochaText),
+                border = BorderStroke(1.dp, MochaSurface1)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("⌨", fontSize = 18.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Keyboard", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            Button(
+                onClick = {
+                    Hub.key("enter")
+                    Haptics.click(ctx)
+                },
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = HyprSky, contentColor = MochaBackground)
+            ) {
+                Text("Enter ↵", fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -1333,7 +1350,7 @@ fun PresenterTab() {
     val ctx = LocalContext.current
     var elapsedSecs by remember { mutableIntStateOf(0) }
     var running by remember { mutableStateOf(false) }
-    var targetSecs by remember { mutableIntStateOf(900) } // Default 15 minutes
+    var targetSecs by remember { mutableIntStateOf(0) } // Default Free (count-up)
     var warned2Min by remember { mutableStateOf(false) }
     var warnedOvertime by remember { mutableStateOf(false) }
 
@@ -1596,7 +1613,7 @@ fun MediaTab() {
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Media Playback (MPRIS / playerctl)", color = HyprSky, fontWeight = FontWeight.Bold)
+                Text("Media Playback", color = HyprSky, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     B("Prev", { Hub.send("media", "action" to "prev") }, Modifier.weight(1f))
                     B("Play / Pause", { Hub.send("media", "action" to "play_pause") }, Modifier.weight(1.3f))
@@ -1612,7 +1629,7 @@ fun MediaTab() {
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("System Volume (wpctl)", color = MochaSapphire, fontWeight = FontWeight.Bold)
+                Text("System Volume", color = MochaSapphire, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     B("− Down", { Hub.send("volume", "action" to "down") }, Modifier.weight(1f))
                     B("Mute", { Hub.send("volume", "action" to "mute") }, Modifier.weight(1f))
@@ -1634,7 +1651,7 @@ fun MediaTab() {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Screen Brightness (brightnessctl)", color = MochaYellow, fontWeight = FontWeight.Bold)
+                    Text("Screen Brightness", color = MochaYellow, fontWeight = FontWeight.Bold)
                     Text("${brightness.toInt()}%", color = MochaYellow, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
                 Slider(
@@ -1674,22 +1691,31 @@ fun HyprlandTab() {
             Text("Hyprland Workspaces", color = HyprSky, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
         }
         item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(ws) { w ->
-                    FilterChip(
-                        selected = w.id == active,
-                        onClick = { Hub.send("ws.switch", "id" to w.id); Haptics.click(ctx) },
-                        label = {
-                            Text(
-                                "WS ${w.id} (${w.windows})",
-                                fontWeight = if (w.id == active) FontWeight.Bold else FontWeight.Normal
-                            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                (1..4).forEach { id ->
+                    val isSelected = active == id
+                    Button(
+                        onClick = {
+                            Hub.send("ws.switch", "id" to id)
+                            Haptics.click(ctx)
                         },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = HyprSky,
-                            selectedLabelColor = MochaBackground
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isSelected) HyprSky else MochaSurface0,
+                            contentColor = if (isSelected) MochaBackground else MochaText
+                        ),
+                        border = BorderStroke(1.dp, if (isSelected) HyprSky else MochaSurface1)
+                    ) {
+                        Text(
+                            id.toString(),
+                            fontSize = 16.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
-                    )
+                    }
                 }
             }
         }
@@ -1802,7 +1828,7 @@ fun FilesTab() {
                 colors = ButtonDefaults.buttonColors(containerColor = MochaRed, contentColor = MochaBackground),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("🔔 Silence Phone Alarm", fontWeight = FontWeight.Bold)
+                Text("Silence Phone Alarm", fontWeight = FontWeight.Bold)
             }
         }
 
@@ -1813,7 +1839,24 @@ fun FilesTab() {
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("📁 Send Files to Linux PC", color = HyprSky, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Canvas(Modifier.size(18.dp)) {
+                        val w = size.width
+                        val h = size.height
+                        val path = Path().apply {
+                            moveTo(w * 0.05f, h * 0.25f)
+                            lineTo(w * 0.40f, h * 0.25f)
+                            lineTo(w * 0.52f, h * 0.38f)
+                            lineTo(w * 0.95f, h * 0.38f)
+                            lineTo(w * 0.95f, h * 0.85f)
+                            lineTo(w * 0.05f, h * 0.85f)
+                            close()
+                        }
+                        drawPath(path, color = HyprSky, style = Stroke(width = 1.8.dp.toPx()))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text("Send Files to Linux PC", color = HyprSky, fontWeight = FontWeight.Bold)
+                }
                 Button(
                     onClick = { pick.launch(arrayOf("*/*")) },
                     modifier = Modifier.fillMaxWidth(),
@@ -1833,7 +1876,29 @@ fun FilesTab() {
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("📋 Two-Way Wayland Clipboard", color = MochaSapphire, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Canvas(Modifier.size(18.dp)) {
+                        val w = size.width
+                        val h = size.height
+                        // Clipboard board
+                        drawRoundRect(
+                            color = MochaSapphire,
+                            size = androidx.compose.ui.geometry.Size(w * 0.8f, h * 0.85f),
+                            topLeft = androidx.compose.ui.geometry.Offset(w * 0.1f, h * 0.12f),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                            style = Stroke(width = 1.8.dp.toPx())
+                        )
+                        // Clip at top
+                        drawRoundRect(
+                            color = MochaSapphire,
+                            size = androidx.compose.ui.geometry.Size(w * 0.35f, h * 0.18f),
+                            topLeft = androidx.compose.ui.geometry.Offset(w * 0.325f, 0f),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx())
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text("Two-Way Wayland Clipboard", color = MochaSapphire, fontWeight = FontWeight.Bold)
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = {
@@ -1866,7 +1931,23 @@ fun FilesTab() {
             shape = RoundedCornerShape(14.dp)
         ) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("🔔 Notifications & SMS Integration", color = MochaGreen, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Canvas(Modifier.size(18.dp)) {
+                        val w = size.width
+                        val h = size.height
+                        val bell = Path().apply {
+                            moveTo(w * 0.5f, h * 0.15f)
+                            cubicTo(w * 0.25f, h * 0.25f, w * 0.20f, h * 0.65f, w * 0.12f, h * 0.75f)
+                            lineTo(w * 0.88f, h * 0.75f)
+                            cubicTo(w * 0.80f, h * 0.65f, w * 0.75f, h * 0.25f, w * 0.5f, h * 0.15f)
+                            close()
+                        }
+                        drawPath(bell, color = MochaGreen, style = Stroke(width = 1.8.dp.toPx()))
+                        drawCircle(color = MochaGreen, radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.88f))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text("Notifications & SMS Integration", color = MochaGreen, fontWeight = FontWeight.Bold)
+                }
                 OutlinedButton(
                     onClick = { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                     modifier = Modifier.fillMaxWidth(),

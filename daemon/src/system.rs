@@ -192,6 +192,7 @@ pub async fn laser_start() {
             let _ = tokio::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).await;
         }
         let ch = Command::new("python3")
+            .arg("-u")
             .arg(&script_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
@@ -203,6 +204,7 @@ pub async fn laser_start() {
     }
     if let Some(stdin) = guard.as_mut() {
         let _ = stdin.write_all(b"start\n").await;
+        let _ = stdin.flush().await;
     }
 }
 
@@ -210,7 +212,7 @@ pub async fn laser_move(dx: i32, dy: i32) {
     let mut guard = LASER.lock().await;
     if let Some(stdin) = guard.as_mut() {
         let cmd = format!("move {dx} {dy}\n");
-        if stdin.write_all(cmd.as_bytes()).await.is_err() {
+        if stdin.write_all(cmd.as_bytes()).await.is_err() || stdin.flush().await.is_err() {
             *guard = None;
         }
     }
@@ -220,6 +222,7 @@ pub async fn laser_stop() {
     let mut guard = LASER.lock().await;
     if let Some(stdin) = guard.as_mut() {
         let _ = stdin.write_all(b"stop\n").await;
+        let _ = stdin.flush().await;
     }
 }
 

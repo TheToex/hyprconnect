@@ -91,9 +91,23 @@ hyprconnect/
 
 ## 🚀 Getting Started (Linux)
 
-### 1. Install Dependencies
+### ⚡ One-Line Automatic Install (Recommended)
 
-#### Arch Linux
+Run this single command in your terminal to automatically verify dependencies, build the daemon, configure `/dev/uinput`, and install desktop launchers and icons:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/TheToex/hyprconnect/main/install.sh | bash
+```
+
+> *(To uninstall anytime, run `./install.sh --uninstall`)*
+
+---
+
+### Manual Installation
+
+#### 1. Install Dependencies
+
+##### Arch Linux
 ```bash
 sudo pacman -S --needed \
     rust cargo \

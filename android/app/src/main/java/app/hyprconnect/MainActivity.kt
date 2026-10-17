@@ -776,6 +776,16 @@ fun MainScreen(onUnpair: () -> Unit) {
                 )
 
                 DrawerItem(
+                    icon = "💖",
+                    label = "Donation",
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://thetoex.github.io/donate/"))
+                        ctx.startActivity(browserIntent)
+                    }
+                )
+
+                DrawerItem(
                     icon = "ℹ",
                     label = "About HyprConnect",
                     onClick = {
@@ -808,16 +818,12 @@ fun MainScreen(onUnpair: () -> Unit) {
                             contentColor = MochaText
                         )
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🐙", fontSize = 14.sp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "GitHub Repository",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MochaText
-                            )
-                        }
+                        Text(
+                            "GitHub Repository",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MochaText
+                        )
                     }
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1254,11 +1260,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = HyprSky)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🐙", fontSize = 12.sp)
-                        Spacer(Modifier.width(6.dp))
-                        Text("github.com/TheToex/hyprconnect", fontSize = 11.sp, color = HyprSky)
-                    }
+                    Text("github.com/TheToex/hyprconnect", fontSize = 11.sp, color = HyprSky)
                 }
             }
         },

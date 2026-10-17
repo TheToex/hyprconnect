@@ -315,3 +315,4 @@ echo -e "    Add to ${BOLD}~/.config/hypr/hyprland.conf${RESET}:"
 echo -e "    ${MAGENTA}exec-once = hyprconnect daemon${RESET}\n"
 echo -e "  • Or enable via systemd:"
 echo -e "    ${CYAN}systemctl --user enable --now hyprconnect.service${RESET}\n"
+

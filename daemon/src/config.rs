@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-pub const DEFAULT_PORT: u16 = 1716;
+pub const DEFAULT_PORT: u16 = 5716;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {

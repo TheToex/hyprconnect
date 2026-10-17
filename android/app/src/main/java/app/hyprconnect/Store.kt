@@ -16,7 +16,7 @@ class Store(ctx: Context) {
         get() = p.getString("host", null)
         set(v) = p.edit().putString("host", v).apply()
     var port: Int
-        get() = p.getInt("port", 1716)
+        get() = p.getInt("port", 5716)
         set(v) = p.edit().putInt("port", v).apply()
     /** SHA-256 of the PC's certificate; every connection is pinned to it. */
     var fp: String?

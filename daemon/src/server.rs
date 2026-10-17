@@ -153,7 +153,21 @@ struct Incoming {
 }
 
 pub async fn run(state: Arc<State>) -> Result<()> {
-    let l = TcpListener::bind(("0.0.0.0", state.cfg.port)).await?;
+    let addr = ("0.0.0.0", state.cfg.port);
+    let l = match TcpListener::bind(addr).await {
+        Ok(l) => l,
+        Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+            anyhow::bail!(
+                "Port {} is already in use!\n\
+                 Another process (e.g. kdeconnectd or another hyprconnect instance) is holding this port.\n\
+                 Solutions:\n\
+                 1. If kdeconnect is running, stop it: killall kdeconnectd\n\
+                 2. Or change \"port\" in ~/.config/hyprconnect/config.json (e.g. \"port\": 5716)",
+                state.cfg.port
+            );
+        }
+        Err(e) => return Err(e.into()),
+    };
     eprintln!("listening on :{}  fingerprint {}", state.cfg.port, state.ident.fingerprint);
     loop {
         let (tcp, peer) = l.accept().await?;

@@ -50,7 +50,7 @@ exec-once = hyprconnect daemon
 ```
 (دیمن همون‌جا محیط Wayland/Hyprland رو ارث می‌بره. نسخه‌ی systemd: `linux-extras/hyprconnect.service`.)
 
-پورت `1716/tcp` رو برای شبکه‌ی محلی توی فایروال باز کن.
+پورت `5716/tcp` رو برای شبکه‌ی محلی توی فایروال باز کن (برای جلوگیری از تداخل با KDE Connect).
 
 ## استفاده
 

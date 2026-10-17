@@ -199,7 +199,7 @@ fun applyPairUri(raw: String): Boolean {
     val fp = u.getQueryParameter("fp") ?: return false
     val token = u.getQueryParameter("token") ?: return false
     if (!Regex("[0-9a-f]{64}").matches(fp)) return false
-    Hub.store.savePairing(host, if (u.port > 0) u.port else 1716, fp, token, u.getQueryParameter("name") ?: "PC")
+    Hub.store.savePairing(host, if (u.port > 0) u.port else 5716, fp, token, u.getQueryParameter("name") ?: "PC")
     return true
 }
 

@@ -4,19 +4,25 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Hyprland Origami Logo (#89DCEB) -->
-    <!-- Left Wing -->
-    <path
-        android:fillColor="#89DCEB"
-        android:pathData="M 54,18 L 19.5,86 L 37.8,86 L 54,52 Z" />
-    <!-- Right Wing -->
-    <path
-        android:fillColor="#89DCEB"
-        android:fillAlpha="0.80"
-        android:pathData="M 54,18 L 54,52 L 70.2,86 L 88.5,86 Z" />
-    <!-- Center Origami Facet (Between the legs - unified #89DCEB) -->
-    <path
-        android:fillColor="#89DCEB"
-        android:fillAlpha="0.92"
-        android:pathData="M 54,52 L 41,80 L 67,80 Z" />
+    <!-- Hyprland Origami Logo (#89DCEB) with proper adaptive safe-zone padding -->
+    <group
+        android:scaleX="0.65"
+        android:scaleY="0.65"
+        android:pivotX="54"
+        android:pivotY="53">
+        <!-- Left Wing -->
+        <path
+            android:fillColor="#89DCEB"
+            android:pathData="M 54,18 L 19.5,86 L 37.8,86 L 54,52 Z" />
+        <!-- Right Wing -->
+        <path
+            android:fillColor="#89DCEB"
+            android:fillAlpha="0.80"
+            android:pathData="M 54,18 L 54,52 L 70.2,86 L 88.5,86 Z" />
+        <!-- Center Origami Facet (Between the legs - unified #89DCEB) -->
+        <path
+            android:fillColor="#89DCEB"
+            android:fillAlpha="0.92"
+            android:pathData="M 54,52 L 41,80 L 67,80 Z" />
+    </group>
 </vector>

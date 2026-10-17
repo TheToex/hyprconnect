@@ -16,6 +16,8 @@ import android.os.IBinder
 class ConnectionService : Service() {
     companion object {
         var instance: ConnectionService? = null
+        const val ACTION_START_MIRROR = "app.hyprconnect.action.START_MIRROR"
+        const val ACTION_STOP_MIRROR = "app.hyprconnect.action.STOP_MIRROR"
     }
 
     private val battery = object : BroadcastReceiver() {
@@ -30,25 +32,21 @@ class ConnectionService : Service() {
         nm.createNotificationChannel(
             NotificationChannel("link", "Connection", NotificationManager.IMPORTANCE_MIN)
         )
-        val open = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
-        )
-        val n = Notification.Builder(this, "link")
-            .setContentTitle("HyprConnect")
-            .setContentText("Linked to ${Hub.store.pcName}")
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentIntent(open)
-            .setOngoing(true)
-            .build()
-        startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        updateForeground(false)
         registerReceiver(battery, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "stop") {
-            Hub.stop(); stopSelf(); return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_START_MIRROR -> updateForeground(true)
+            ACTION_STOP_MIRROR -> updateForeground(false)
+            "stop" -> {
+                Hub.stop()
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            else -> Hub.start()
         }
-        Hub.start()
         return START_STICKY
     }
 

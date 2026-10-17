@@ -59,10 +59,13 @@ object Hub {
     val toasts = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val screenFrame = MutableStateFlow<android.graphics.Bitmap?>(null)
     val brightness = mutableFloatStateOf(100f)
+    val pairedDevices = MutableStateFlow<List<PairedDevice>>(emptyList())
 
     lateinit var store: Store
         private set
-    private lateinit var app: Context
+    lateinit var app: Context
+        private set
+    val appContext: Context get() = app
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val main = Handler(Looper.getMainLooper())
     private val out = Channel<JSONObject>(64)
@@ -81,6 +84,13 @@ object Hub {
         if (::app.isInitialized) return
         app = ctx.applicationContext
         store = Store(app)
+        refreshPairedDevices()
+    }
+
+    fun refreshPairedDevices() {
+        if (::store.isInitialized) {
+            pairedDevices.value = store.getPairedDevices()
+        }
     }
 
     fun start() {
@@ -97,7 +107,29 @@ object Hub {
     fun unpair() {
         stop()
         store.clear()
+        refreshPairedDevices()
         workspaces.value = emptyList(); windows.value = emptyList(); commands.value = emptyList()
+    }
+
+    fun switchDevice(device: PairedDevice) {
+        stop()
+        store.switchToDevice(device)
+        refreshPairedDevices()
+        start()
+    }
+
+    fun removeDevice(targetFp: String) {
+        val wasActive = store.fp == targetFp
+        store.removePairedDevice(targetFp)
+        refreshPairedDevices()
+        if (wasActive) {
+            if (store.hasPairing) {
+                stop()
+                start()
+            } else {
+                unpair()
+            }
+        }
     }
 
     fun toast(s: String) { toasts.tryEmit(s) }
@@ -212,9 +244,10 @@ object Hub {
         val first = JSONObject(rd.readLine() ?: throw java.io.IOException("closed during handshake"))
         if (first.getString("t") == "error") throw Rejected(first.optString("msg"))
         if (first.has("secret")) {
-            store.secret = first.getString("secret")
-            store.token = null
-            first.optString("host").takeIf { it.isNotEmpty() }?.let { store.pcName = it }
+            val sec = first.getString("secret")
+            val name = first.optString("host").takeIf { it.isNotEmpty() } ?: store.pcName
+            store.updateCurrentDeviceSecret(sec, name)
+            refreshPairedDevices()
         }
 
         while (out.tryReceive().isSuccess) { /* drop stale events */ }

@@ -255,6 +255,7 @@ fun applyPairUri(raw: String): Boolean {
     val token = u.getQueryParameter("token") ?: return false
     if (!Regex("[0-9a-f]{64}").matches(fp)) return false
     Hub.store.savePairing(host, if (u.port > 0) u.port else 5716, fp, token, u.getQueryParameter("name") ?: "PC")
+    Hub.refreshPairedDevices()
     return true
 }
 
@@ -552,6 +553,7 @@ fun MainScreen(onUnpair: () -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
     val snack = remember { SnackbarHostState() }
     val conn by Hub.conn.collectAsState()
+    val pairedDevices by Hub.pairedDevices.collectAsState()
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
@@ -559,6 +561,7 @@ fun MainScreen(onUnpair: () -> Unit) {
     var showAboutDialog by remember { mutableStateOf(false) }
     var showUnpairConfirm by remember { mutableStateOf(false) }
     var showPairNewDialog by remember { mutableStateOf(false) }
+    var deviceToDelete by remember { mutableStateOf<PairedDevice?>(null) }
 
     LaunchedEffect(Unit) { Hub.toasts.collect { snack.showSnackbar(it) } }
     DisposableEffect(tab) {
@@ -640,15 +643,88 @@ fun MainScreen(onUnpair: () -> Unit) {
 
                 // Section 1: Pairing & Connectivity
                 Text(
-                    "DEVICES & PAIRING",
+                    "PAIRED DEVICES",
                     color = MochaSubtext,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
                 )
 
+                if (pairedDevices.isEmpty()) {
+                    Text(
+                        "No paired devices",
+                        color = MochaSubtext,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+                    )
+                } else {
+                    pairedDevices.forEach { dev ->
+                        val isActive = dev.fp == Hub.store.fp
+                        Surface(
+                            onClick = {
+                                if (!isActive) {
+                                    scope.launch { drawerState.close() }
+                                    Hub.switchDevice(dev)
+                                    Hub.toast("Connecting to ${dev.name}...")
+                                }
+                            },
+                            color = if (isActive) MochaBase else Color.Transparent,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("💻", fontSize = 16.sp)
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            dev.name,
+                                            color = if (isActive) HyprSky else MochaText,
+                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 13.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (isActive) {
+                                            Spacer(Modifier.width(6.dp))
+                                            Box(
+                                                Modifier
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(if (conn is Hub.Conn.On) MochaGreen else MochaYellow)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        if (dev.host.isNotBlank()) dev.host else "Auto-discovery",
+                                        color = MochaSubtext,
+                                        fontSize = 11.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { deviceToDelete = dev },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Text("✕", color = MochaSubtext, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(4.dp))
+
                 DrawerItem(
-                    icon = "🔗",
+                    icon = "➕",
                     label = "Pair New Device",
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -656,15 +732,17 @@ fun MainScreen(onUnpair: () -> Unit) {
                     }
                 )
 
-                DrawerItem(
-                    icon = "✕",
-                    label = "Unpair PC",
-                    textColor = MochaRed,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        showUnpairConfirm = true
-                    }
-                )
+                if (Hub.store.hasPairing) {
+                    DrawerItem(
+                        icon = "✕",
+                        label = "Unpair Current PC",
+                        textColor = MochaRed,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            showUnpairConfirm = true
+                        }
+                    )
+                }
 
                 HorizontalDivider(color = MochaSurface0, modifier = Modifier.padding(vertical = 8.dp))
 
@@ -834,6 +912,35 @@ fun MainScreen(onUnpair: () -> Unit) {
         )
     }
 
+    // Device Removal Confirmation Dialog
+    if (deviceToDelete != null) {
+        val dev = deviceToDelete!!
+        AlertDialog(
+            onDismissRequest = { deviceToDelete = null },
+            title = { Text("Remove Device?", fontWeight = FontWeight.Bold) },
+            text = { Text("Remove '${dev.name}' from saved devices? You will need to pair it again to reconnect.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val targetFp = dev.fp
+                        deviceToDelete = null
+                        Hub.removeDevice(targetFp)
+                        if (!Hub.store.hasPairing) {
+                            onUnpair()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MochaRed)
+                ) { Text("Remove") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deviceToDelete = null }) { Text("Cancel", color = MochaSubtext) }
+            },
+            containerColor = MochaBase,
+            textContentColor = MochaText,
+            titleContentColor = MochaText
+        )
+    }
+
     // Pair New Dialog
     if (showPairNewDialog) {
         var manualUrl by remember { mutableStateOf("") }
@@ -855,7 +962,9 @@ fun MainScreen(onUnpair: () -> Unit) {
                                 .addOnSuccessListener {
                                     if (applyPairUri(it.rawValue ?: "")) {
                                         showPairNewDialog = false
+                                        Hub.stop()
                                         startLink(ctx)
+                                        Hub.start()
                                     } else {
                                         pairErr = "Invalid QR code"
                                     }
@@ -884,7 +993,9 @@ fun MainScreen(onUnpair: () -> Unit) {
                     onClick = {
                         if (applyPairUri(manualUrl)) {
                             showPairNewDialog = false
+                            Hub.stop()
                             startLink(ctx)
+                            Hub.start()
                         } else {
                             pairErr = "Invalid pairing URL"
                         }
@@ -1717,10 +1828,14 @@ fun HyprlandTab() {
     val mirrorLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { res ->
-        if (res.resultCode == android.app.Activity.RESULT_OK && res.data != null) {
-            MirrorManager.start(ctx, res.resultCode, res.data!!)
-        } else {
-            Hub.toast("Screen share permission cancelled")
+        try {
+            if (res.resultCode == android.app.Activity.RESULT_OK && res.data != null) {
+                MirrorManager.start(ctx, res.resultCode, res.data!!)
+            } else {
+                Hub.toast("Screen share permission cancelled")
+            }
+        } catch (e: Exception) {
+            Hub.toast("Screen mirror error: ${e.message}")
         }
     }
 
@@ -1797,7 +1912,11 @@ fun HyprlandTab() {
                             if (isMirroring) {
                                 MirrorManager.stop()
                             } else {
-                                mirrorLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
+                                try {
+                                    mirrorLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
+                                } catch (e: Exception) {
+                                    Hub.toast("Screen capture error: ${e.message}")
+                                }
                             }
                             Haptics.click(ctx)
                         },

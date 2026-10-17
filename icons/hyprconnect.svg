@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="128" height="128">
-  <!-- Hyprland Origami Logo (#89DCEB) -->
-  <path fill="#89DCEB" d="M 54,18 L 19.5,86 L 37.8,86 L 54,52 Z" />
-  <path fill="#89DCEB" fill-opacity="0.80" d="M 54,18 L 54,52 L 70.2,86 L 88.5,86 Z" />
-  <path fill="#89DCEB" fill-opacity="0.92" d="M 54,52 L 41,80 L 67,80 Z" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Hyprland Origami Logo (HyprSky #89DCEB & #74C7EC) -->
+  <path fill="#89DCEB" d="M 12,1 L 1.2,23 L 7.2,23 L 12,12.2 Z" />
+  <path fill="#74C7EC" d="M 12,1 L 12,12.2 L 16.8,23 L 22.8,23 Z" />
+  <path fill="#89DCEB" d="M 12,12.2 L 8.4,18.7 L 15.6,18.7 Z" />
 </svg>

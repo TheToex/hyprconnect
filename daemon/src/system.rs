@@ -53,7 +53,10 @@ pub async fn pipe_to(prog: &str, args: &[&str], data: &str) {
 }
 
 pub fn notify(app: &str, title: &str, body: &str) {
-    spawn("notify-send", &["-a", app, "--", title, body]);
+    let icon = std::env::var("HOME")
+        .map(|h| format!("{h}/.local/share/hyprconnect/icons/hyprconnect.png"))
+        .unwrap_or_else(|_| "hyprconnect".into());
+    spawn("notify-send", &["-a", app, "-i", &icon, "--", title, body]);
 }
 
 pub fn media(action: &str) {

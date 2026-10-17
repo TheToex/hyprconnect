@@ -100,37 +100,52 @@ def ipc_call(req_dict, timeout=3.0):
 
 def notify(summary, body="", icon=None):
     try:
-        cmd = ["notify-send", "-a", "HyprConnect"]
-        if icon:
-            cmd.extend(["-i", icon])
-        cmd.extend([summary, body])
+        icon_path = icon or os.path.expanduser("~/.local/share/hyprconnect/icons/hyprconnect.png")
+        if not os.path.exists(icon_path):
+            icon_path = "hyprconnect"
+        cmd = ["notify-send", "-a", "HyprConnect", "-i", icon_path, summary, body]
         subprocess.Popen(cmd)
     except Exception:
         pass
 
-SVG_ONLINE = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="128" height="128">
-  <path fill="#89DCEB" d="M 54,18 L 19.5,86 L 37.8,86 L 54,52 Z" />
-  <path fill="#89DCEB" fill-opacity="0.80" d="M 54,18 L 54,52 L 70.2,86 L 88.5,86 Z" />
-  <path fill="#89DCEB" fill-opacity="0.92" d="M 54,52 L 41,80 L 67,80 Z" />
+SVG_ONLINE = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Hyprland Origami Logo (HyprSky #89DCEB & #74C7EC) -->
+  <path fill="#89DCEB" d="M 12,1 L 1.2,23 L 7.2,23 L 12,12.2 Z" />
+  <path fill="#74C7EC" d="M 12,1 L 12,12.2 L 16.8,23 L 22.8,23 Z" />
+  <path fill="#89DCEB" d="M 12,12.2 L 8.4,18.7 L 15.6,18.7 Z" />
 </svg>"""
 
-SVG_OFFLINE = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="128" height="128">
-  <path fill="#585B70" d="M 54,18 L 19.5,86 L 37.8,86 L 54,52 Z" />
-  <path fill="#585B70" fill-opacity="0.80" d="M 54,18 L 54,52 L 70.2,86 L 88.5,86 Z" />
-  <path fill="#585B70" fill-opacity="0.92" d="M 54,52 L 41,80 L 67,80 Z" />
-</svg>"""
+SVG_OFFLINE = SVG_ONLINE
+
+def make_menu_item(label, icon_name=None, on_activate=None):
+    if icon_name:
+        item = Gtk.ImageMenuItem.new_with_label(label)
+        img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.MENU)
+        item.set_image(img)
+        item.set_always_show_image(True)
+    else:
+        item = Gtk.MenuItem.new_with_label(label)
+    if on_activate:
+        item.connect("activate", on_activate)
+    return item
+
+def update_item(item, label, icon_name=None):
+    item.set_label(label)
+    if icon_name:
+        img = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.MENU)
+        item.set_image(img)
+        item.set_always_show_image(True)
 
 class HyprConnectTray:
     def __init__(self):
         self.icon_dir = self._locate_icon_dir()
         online_png = os.path.join(self.icon_dir, "hyprconnect.png")
         self.online_icon = online_png if os.path.exists(online_png) else os.path.join(self.icon_dir, "hyprconnect.svg")
-        offline_png = os.path.join(self.icon_dir, "hyprconnect-offline.png")
-        self.offline_icon = offline_png if os.path.exists(offline_png) else os.path.join(self.icon_dir, "hyprconnect-offline.svg")
+        self.offline_icon = self.online_icon
 
         self.indicator = appindicator.Indicator.new(
             "hyprconnect",
-            self.offline_icon,
+            self.online_icon,
             appindicator.IndicatorCategory.APPLICATION_STATUS
         )
         self.indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
@@ -176,49 +191,41 @@ class HyprConnectTray:
         self.menu = Gtk.Menu()
 
         # 1. Device Info Header
-        self.item_device = Gtk.MenuItem(label="📱 Disconnected")
+        self.item_device = make_menu_item("No Phone Connected", "phone-symbolic")
         self.item_device.set_sensitive(False)
         self.menu.append(self.item_device)
 
-        self.item_battery = Gtk.MenuItem(label="🔋 Battery: N/A")
+        self.item_battery = make_menu_item("Battery: N/A", "battery-symbolic")
         self.item_battery.set_sensitive(False)
+        self.item_battery.set_visible(False)
         self.menu.append(self.item_battery)
 
-        self.item_status = Gtk.MenuItem(label="📶 Waiting for connection...")
+        self.item_status = make_menu_item("Waiting for connection...", "network-wireless-symbolic")
         self.item_status.set_sensitive(False)
         self.menu.append(self.item_status)
 
         self.menu.append(Gtk.SeparatorMenuItem())
 
         # 2. Actions
-        self.item_send = Gtk.MenuItem(label="📁 Send File to Phone...")
-        self.item_send.connect("activate", self.on_send_file)
+        self.item_send = make_menu_item("Send File to Phone...", "document-send-symbolic", self.on_send_file)
         self.menu.append(self.item_send)
 
-        self.item_sms = Gtk.MenuItem(label="💬 Send SMS...")
-        self.item_sms.connect("activate", self.on_send_sms)
+        self.item_sms = make_menu_item("Send SMS...", "chat-message-new-symbolic", self.on_send_sms)
         self.menu.append(self.item_sms)
 
-        self.item_ring = Gtk.MenuItem(label="🔔 Ring Phone")
-        self.item_ring.connect("activate", self.on_ring_phone)
-        self.menu.append(self.item_ring)
-
-        self.item_clip = Gtk.MenuItem(label="📋 Sync Clipboard to Phone")
-        self.item_clip.connect("activate", self.on_sync_clip)
+        self.item_clip = make_menu_item("Sync Clipboard to Phone", "edit-paste-symbolic", self.on_sync_clip)
         self.menu.append(self.item_clip)
 
         self.menu.append(Gtk.SeparatorMenuItem())
 
         # 3. Pairing
-        self.item_pair = Gtk.MenuItem(label="➕ Pair New Device (QR)...")
-        self.item_pair.connect("activate", self.on_pair_new)
+        self.item_pair = make_menu_item("Pair New Device (QR)...", "insert-link-symbolic", self.on_pair_new)
         self.menu.append(self.item_pair)
 
         self.menu.append(Gtk.SeparatorMenuItem())
 
         # 4. Quit
-        item_quit = Gtk.MenuItem(label="🚪 Quit Tray")
-        item_quit.connect("activate", lambda _: Gtk.main_quit())
+        item_quit = make_menu_item("Quit Tray", "application-exit-symbolic", lambda _: Gtk.main_quit())
         self.menu.append(item_quit)
 
         self.menu.show_all()
@@ -241,42 +248,39 @@ class HyprConnectTray:
             bat = connected_dev.get("battery")
 
             self.indicator.set_icon_full(self.online_icon, "HyprConnect - Connected")
-            self.item_device.set_label(f"📱 {name} (Connected)")
+            update_item(self.item_device, f"{name} (Connected)", "phone-symbolic")
 
             if bat and bat.get("pct") is not None:
                 pct = bat.get("pct")
                 chg = bat.get("charging", False)
-                bat_icon = "⚡" if chg else "🔋"
                 chg_str = " (Charging)" if chg else ""
-                self.item_battery.set_label(f"{bat_icon} Battery: {pct}%{chg_str}")
+                update_item(self.item_battery, f"Battery: {pct}%{chg_str}", "battery-symbolic")
                 self.item_battery.set_visible(True)
                 tooltip = f"HyprConnect: {name} ({pct}%)"
             else:
                 self.item_battery.set_visible(False)
                 tooltip = f"HyprConnect: {name}"
 
-            self.item_status.set_label("📶 Status: Connected (Wi-Fi)")
+            update_item(self.item_status, "Wi-Fi Connected", "network-wireless-symbolic")
 
             self.item_send.set_sensitive(True)
             self.item_sms.set_sensitive(True)
-            self.item_ring.set_sensitive(True)
             self.item_clip.set_sensitive(True)
 
             self.indicator.set_title(tooltip)
         else:
             self.current_device = None
             self.is_connected = False
-            self.indicator.set_icon_full(self.offline_icon, "HyprConnect - Offline")
-            self.item_device.set_label("📱 No Phone Connected")
+            self.indicator.set_icon_full(self.online_icon, "HyprConnect - Disconnected")
+            update_item(self.item_device, "No Phone Connected", "phone-symbolic")
             self.item_battery.set_visible(False)
-            self.item_status.set_label("📶 Status: Waiting for connection...")
+            update_item(self.item_status, "Waiting for connection...", "network-wireless-symbolic")
 
             self.item_send.set_sensitive(False)
             self.item_sms.set_sensitive(False)
-            self.item_ring.set_sensitive(False)
             self.item_clip.set_sensitive(False)
 
-            self.indicator.set_title("HyprConnect - Offline")
+            self.indicator.set_title("HyprConnect - Disconnected")
 
         return True
 
@@ -353,21 +357,12 @@ class HyprConnectTray:
                     if res and res.get("ok"):
                         notify("SMS Sent", f"Message sent to {to}", self.online_icon)
                     else:
-                        notify("SMS Failed", "Could not send SMS", self.offline_icon)
+                        notify("SMS Failed", "Could not send SMS", self.online_icon)
                 threading.Thread(target=worker, daemon=True).start()
         btn_send.connect("clicked", do_send)
         btn_box.pack_end(btn_send, False, False, 0)
 
         win.show_all()
-
-    def on_ring_phone(self, _):
-        def worker():
-            res = ipc_call({"cmd": "ring"})
-            if res and res.get("ok"):
-                notify("Ringing Phone", "Sent ring command to phone", self.online_icon)
-            else:
-                notify("Ring Failed", "Could not ring phone", self.offline_icon)
-        threading.Thread(target=worker, daemon=True).start()
 
     def on_sync_clip(self, _):
         def worker():
@@ -375,13 +370,13 @@ class HyprConnectTray:
             if res and res.get("ok"):
                 notify("Clipboard Synced", "Desktop clipboard sent to phone", self.online_icon)
             else:
-                notify("Sync Failed", "Could not sync clipboard", self.offline_icon)
+                notify("Sync Failed", "Could not sync clipboard", self.online_icon)
         threading.Thread(target=worker, daemon=True).start()
 
     def on_pair_new(self, _):
         res = ipc_call({"cmd": "pair"})
         if not res or not res.get("ok"):
-            notify("Pairing Failed", "Could not initiate pairing with daemon", self.offline_icon)
+            notify("Pairing Failed", "Could not initiate pairing with daemon", self.online_icon)
             return
 
         uri = res.get("uri", "")

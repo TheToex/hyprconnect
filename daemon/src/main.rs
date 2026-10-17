@@ -14,6 +14,7 @@ const HELP: &str = "hyprconnect — phone <-> Hyprland bridge
 
 USAGE:
   hyprconnect daemon              run the daemon (put in Hyprland exec-once)
+  hyprconnect tray                run the system tray applet standalone
   hyprconnect pair                show a QR code to pair the phone
   hyprconnect devices             list paired phones, battery, connection state
   hyprconnect send <file>         send a file to the phone
@@ -83,6 +84,15 @@ async fn daemon() -> Result<()> {
             eprintln!("ipc: {e}");
         }
     });
+
+    // Auto-launch system tray in background
+    tokio::spawn(async {
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        if let Err(e) = system::run_tray(false).await {
+            eprintln!("tray: {e}");
+        }
+    });
+
     server::run(st).await
 }
 
@@ -91,6 +101,7 @@ async fn main() -> Result<()> {
     let a: Vec<String> = std::env::args().skip(1).collect();
     match a.first().map(|s| s.as_str()) {
         Some("daemon") => daemon().await?,
+        Some("tray") => system::run_tray(true).await?,
         Some("pair") => {
             let v = ipc(json!({"cmd":"pair"})).await?;
             let uri = v["uri"].as_str().unwrap_or_default();

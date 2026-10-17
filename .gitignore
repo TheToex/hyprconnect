@@ -5,4 +5,6 @@ android/.gradle/
 android/.idea/
 android/.kotlin/
 android/local.properties
+__pycache__/
+*.pyc
 

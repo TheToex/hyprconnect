@@ -1,4 +1,5 @@
 //! Thin wrappers around the tools a Hyprland desktop already has.
+use anyhow::{bail, Result};
 use serde_json::{json, Value};
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
@@ -329,4 +330,33 @@ pub fn win_focus(address: &str) {
 pub fn run_shell(cmdline: &str) {
     spawn("sh", &["-c", cmdline]);
 }
+
+const TRAY_SCRIPT: &str = include_str!("../../bin/hyprconnect-tray");
+
+pub async fn run_tray(foreground: bool) -> Result<()> {
+    let script_path = std::env::var("XDG_RUNTIME_DIR")
+        .map(|r| format!("{r}/hyprconnect-tray"))
+        .unwrap_or_else(|_| "/tmp/hyprconnect-tray".into());
+    let _ = tokio::fs::write(&script_path, TRAY_SCRIPT).await;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = tokio::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).await;
+    }
+    let mut cmd = Command::new("python3");
+    cmd.arg("-u").arg(&script_path);
+    if foreground {
+        let status = cmd.status().await?;
+        if !status.success() {
+            bail!("tray applet exited with status: {status}");
+        }
+    } else {
+        cmd.stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?;
+    }
+    Ok(())
+}
+
 

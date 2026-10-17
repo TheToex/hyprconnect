@@ -39,7 +39,7 @@ sudo usermod -aG input $USER          # بعدش یک بار logout/login
 sudo udevadm control --reload && sudo modprobe uinput
 echo uinput | sudo tee /etc/modules-load.d/uinput.conf
 
-install -Dm755 bin/hyprconnect-x86_64-linux ~/.local/bin/hyprconnect
+install -Dm755 bin/hyprconnect ~/.local/bin/hyprconnect
 # یا از سورس:  cd daemon && cargo build --release
 ```
 

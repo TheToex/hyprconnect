@@ -23,6 +23,7 @@ const CHUNK: usize = 48 * 1024;
 const MAX_FILE: u64 = 8 * 1024 * 1024 * 1024;
 
 pub struct Session {
+    #[allow(dead_code)]
     pub name: String,
     pub tx: mpsc::Sender<Value>,
     pub battery: Option<(i64, bool)>,

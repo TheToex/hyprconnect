@@ -1,0 +1,13 @@
+[Unit]
+Description=HyprConnect daemon
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/hyprconnect daemon
+Restart=on-failure
+RestartSec=3
+# hyprctl / wl-copy need the Hyprland session environment. Import it first, e.g. in hyprland.conf:
+#   exec-once = systemctl --user import-environment WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_RUNTIME_DIR
+
+[Install]
+WantedBy=default.target

@@ -18,7 +18,7 @@ use crate::input::Input;
 use crate::system as sys;
 use crate::tls::Identity;
 
-const MAX_LINE: u64 = 256 * 1024;
+const MAX_LINE: u64 = 2 * 1024 * 1024;
 const CHUNK: usize = 48 * 1024;
 const MAX_FILE: u64 = 8 * 1024 * 1024 * 1024;
 
@@ -112,6 +112,16 @@ enum In {
     Volume { action: String },
     #[serde(rename = "brightness")]
     Brightness { action: String },
+    #[serde(rename = "brightness.set")]
+    BrightnessSet { percent: i32 },
+    #[serde(rename = "screen.capture")]
+    ScreenCapture,
+    #[serde(rename = "laser.start")]
+    LaserStart,
+    #[serde(rename = "laser.move")]
+    LaserMove { dx: i32, dy: i32 },
+    #[serde(rename = "laser.stop")]
+    LaserStop,
     #[serde(rename = "ws.list")]
     WsList,
     #[serde(rename = "ws.switch")]
@@ -354,6 +364,15 @@ async fn on_msg(st: &Arc<State>, id: &str, tx: &mpsc::Sender<Value>, files: &mut
         In::Media { action } => sys::media(&action),
         In::Volume { action } => sys::volume(&action),
         In::Brightness { action } => sys::brightness(&action),
+        In::BrightnessSet { percent } => sys::brightness_set(percent),
+        In::ScreenCapture => {
+            if let Some(f) = sys::capture_screen().await {
+                let _ = tx.send(json!({"t":"screen.frame","data":f})).await;
+            }
+        }
+        In::LaserStart => sys::laser_start().await,
+        In::LaserMove { dx, dy } => sys::laser_move(dx, dy).await,
+        In::LaserStop => sys::laser_stop().await,
         In::WsList => { let _ = tx.send(sys::ws_state().await).await; }
         In::WsSwitch { id } => sys::ws_switch(id),
         In::WinList => { let _ = tx.send(sys::win_list().await).await; }

@@ -23,6 +23,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,9 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -379,14 +383,135 @@ fun PairScreen(onPaired: () -> Unit) {
     }
 }
 
-// ───────────────────────── Navigation Tabs Definition
+// ───────────────────────── Navigation Tabs Definition & Unified Vector Icons
 private val TABS = listOf(
-    "Trackpad" to "🖱",
-    "Presenter" to "📽",
-    "Media" to "🎵",
-    "Hyprland" to "🖥",
-    "Files" to "📁"
+    "Trackpad",
+    "Presenter",
+    "Media",
+    "Hyprland",
+    "Files"
 )
+
+@Composable
+fun TabIcon(tab: Int, selected: Boolean) {
+    val color = if (selected) HyprSky else MochaSubtext
+    when (tab) {
+        0 -> { // Trackpad
+            Canvas(Modifier.size(22.dp)) {
+                val w = size.width
+                val h = size.height
+                // Rounded trackpad body
+                drawRoundRect(
+                    color = color,
+                    size = androidx.compose.ui.geometry.Size(w, h * 0.85f),
+                    topLeft = androidx.compose.ui.geometry.Offset(0f, h * 0.08f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx()),
+                    style = Stroke(width = 1.8.dp.toPx())
+                )
+                // Bottom click separator
+                drawLine(
+                    color = color,
+                    start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.65f),
+                    end = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.93f),
+                    strokeWidth = 1.8.dp.toPx()
+                )
+                drawLine(
+                    color = color,
+                    start = androidx.compose.ui.geometry.Offset(0f, h * 0.65f),
+                    end = androidx.compose.ui.geometry.Offset(w, h * 0.65f),
+                    strokeWidth = 1.8.dp.toPx()
+                )
+            }
+        }
+        1 -> { // Presenter (Slide Board / Projection screen)
+            Canvas(Modifier.size(22.dp)) {
+                val w = size.width
+                val h = size.height
+                // Screen outline
+                drawRoundRect(
+                    color = color,
+                    size = androidx.compose.ui.geometry.Size(w, h * 0.65f),
+                    topLeft = androidx.compose.ui.geometry.Offset(0f, 0f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx()),
+                    style = Stroke(width = 1.8.dp.toPx())
+                )
+                // Play triangle inside screen
+                val playPath = Path().apply {
+                    moveTo(w * 0.40f, h * 0.18f)
+                    lineTo(w * 0.65f, h * 0.325f)
+                    lineTo(w * 0.40f, h * 0.47f)
+                    close()
+                }
+                drawPath(playPath, color = color)
+                // Stand pole and legs
+                drawLine(
+                    color = color,
+                    start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.65f),
+                    end = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.88f),
+                    strokeWidth = 1.8.dp.toPx()
+                )
+                drawLine(
+                    color = color,
+                    start = androidx.compose.ui.geometry.Offset(w * 0.25f, h),
+                    end = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.88f),
+                    strokeWidth = 1.8.dp.toPx()
+                )
+                drawLine(
+                    color = color,
+                    start = androidx.compose.ui.geometry.Offset(w * 0.75f, h),
+                    end = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.88f),
+                    strokeWidth = 1.8.dp.toPx()
+                )
+            }
+        }
+        2 -> { // Media (Music Note)
+            Canvas(Modifier.size(22.dp)) {
+                val w = size.width
+                val h = size.height
+                // Note head
+                drawCircle(
+                    color = color,
+                    radius = w * 0.22f,
+                    center = androidx.compose.ui.geometry.Offset(w * 0.32f, h * 0.72f)
+                )
+                // Stem
+                drawLine(
+                    color = color,
+                    start = androidx.compose.ui.geometry.Offset(w * 0.50f, h * 0.72f),
+                    end = androidx.compose.ui.geometry.Offset(w * 0.50f, h * 0.15f),
+                    strokeWidth = 2.dp.toPx()
+                )
+                // Flag / beam
+                val flagPath = Path().apply {
+                    moveTo(w * 0.50f, h * 0.15f)
+                    cubicTo(w * 0.75f, h * 0.18f, w * 0.85f, h * 0.35f, w * 0.85f, h * 0.48f)
+                    cubicTo(w * 0.75f, h * 0.36f, w * 0.62f, h * 0.32f, w * 0.50f, h * 0.32f)
+                    close()
+                }
+                drawPath(flagPath, color = color)
+            }
+        }
+        3 -> { // Hyprland (Origami logo)
+            HyprlandLogo(Modifier.size(22.dp), color = color)
+        }
+        else -> { // Files (Folder)
+            Canvas(Modifier.size(22.dp)) {
+                val w = size.width
+                val h = size.height
+                val folderPath = Path().apply {
+                    moveTo(w * 0.05f, h * 0.25f)
+                    lineTo(w * 0.40f, h * 0.25f)
+                    lineTo(w * 0.52f, h * 0.38f)
+                    lineTo(w * 0.95f, h * 0.38f)
+                    lineTo(w * 0.95f, h * 0.85f)
+                    lineTo(w * 0.05f, h * 0.85f)
+                    close()
+                }
+                drawPath(folderPath, color = color, style = Stroke(width = 1.8.dp.toPx()))
+            }
+        }
+    }
+}
 
 @Composable
 fun DrawerItem(
@@ -631,11 +756,11 @@ fun MainScreen(onUnpair: () -> Unit) {
                     containerColor = MochaMantle,
                     tonalElevation = 4.dp
                 ) {
-                    TABS.forEachIndexed { i, (label, icon) ->
+                    TABS.forEachIndexed { i, label ->
                         NavigationBarItem(
                             selected = tab == i,
                             onClick = { tab = i; Haptics.click(ctx) },
-                            icon = { Text(icon, fontSize = 20.sp) },
+                            icon = { TabIcon(i, tab == i) },
                             label = {
                                 Text(
                                     label,
@@ -647,7 +772,8 @@ fun MainScreen(onUnpair: () -> Unit) {
                                 selectedIconColor = HyprSky,
                                 selectedTextColor = HyprSky,
                                 indicatorColor = MochaSurface0,
-                                unselectedTextColor = MochaSubtext
+                                unselectedTextColor = MochaSubtext,
+                                unselectedIconColor = MochaSubtext
                             )
                         )
                     }
@@ -660,7 +786,7 @@ fun MainScreen(onUnpair: () -> Unit) {
                     1 -> PresenterTab()
                     2 -> MediaTab()
                     3 -> HyprlandTab()
-                    else -> FilesTab(onUnpair = { showUnpairConfirm = true })
+                    else -> FilesTab()
                 }
             }
         }
@@ -1009,10 +1135,8 @@ private suspend fun PointerInputScope.trackpadGesture(sensitivity: Float) = awai
             val dx = c.position.x - c.previousPosition.x
             val dy = c.position.y - c.previousPosition.y
             moved += abs(dx) + abs(dy)
-            val dist = hypot(dx, dy)
-            val accel = (1.4f + minOf(dist / 18f, 2.4f)) * sensitivity
-            accX += dx * accel
-            accY += dy * accel
+            accX += dx * sensitivity
+            accY += dy * sensitivity
             val ix = accX.toInt()
             val iy = accY.toInt()
             if (ix != 0 || iy != 0) {
@@ -1096,16 +1220,8 @@ fun TrackpadTab() {
         // Quick Function / Modifier Keys
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(
-                onClick = { Hub.key("super"); Haptics.click(ctx) },
-                modifier = Modifier.weight(1.1f),
-                contentPadding = PaddingValues(2.dp),
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, HyprSky)
-            ) { Text("Super ❖", color = HyprSky, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-
-            OutlinedButton(
                 onClick = { Hub.key("tab"); Haptics.click(ctx) },
-                modifier = Modifier.weight(0.9f),
+                modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(2.dp),
                 shape = RoundedCornerShape(8.dp),
                 border = BorderStroke(1.dp, MochaSurface0)
@@ -1113,7 +1229,7 @@ fun TrackpadTab() {
 
             OutlinedButton(
                 onClick = { Hub.key("esc"); Haptics.click(ctx) },
-                modifier = Modifier.weight(0.9f),
+                modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(2.dp),
                 shape = RoundedCornerShape(8.dp),
                 border = BorderStroke(1.dp, MochaSurface0)
@@ -1121,19 +1237,27 @@ fun TrackpadTab() {
 
             OutlinedButton(
                 onClick = { Hub.key("backspace"); Haptics.click(ctx) },
-                modifier = Modifier.weight(0.9f),
+                modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(2.dp),
                 shape = RoundedCornerShape(8.dp),
                 border = BorderStroke(1.dp, MochaSurface0)
             ) { Text("⌫", color = MochaText, fontSize = 12.sp) }
 
-            OutlinedButton(
-                onClick = { Hub.key("enter"); Haptics.click(ctx) },
-                modifier = Modifier.weight(1f),
+            Button(
+                onClick = {
+                    if (liveText.isNotBlank()) {
+                        Hub.text(liveText)
+                        liveText = ""
+                    } else {
+                        Hub.key("enter")
+                    }
+                    Haptics.click(ctx)
+                },
+                modifier = Modifier.weight(1.3f),
                 contentPadding = PaddingValues(2.dp),
                 shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, MochaSurface0)
-            ) { Text("↵ Enter", color = MochaGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) }
+                colors = ButtonDefaults.buttonColors(containerColor = HyprSky, contentColor = MochaBackground)
+            ) { Text("Send ↵", fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         }
 
         // Shortcut Chips
@@ -1163,30 +1287,26 @@ fun TrackpadTab() {
             }
         }
 
-        // Live Remote Typing Input (Direct uinput keystroke forwarding)
+        // Remote Typing Input Box
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = liveText,
-                onValueChange = { next ->
-                    if (next.length > liveText.length) {
-                        val added = next.substring(liveText.length)
-                        Hub.text(added)
-                    } else if (next.length < liveText.length) {
-                        val deletedCount = liveText.length - next.length
-                        repeat(deletedCount) { Hub.key("backspace") }
-                    }
-                    liveText = next
-                },
+                onValueChange = { liveText = it },
                 singleLine = true,
-                placeholder = { Text("Type live to PC...", fontSize = 13.sp) },
+                placeholder = { Text("Type text to send to PC...", fontSize = 13.sp) },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(10.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = {
-                    Hub.key("enter")
+                    if (liveText.isNotBlank()) {
+                        Hub.text(liveText)
+                        liveText = ""
+                    } else {
+                        Hub.key("enter")
+                    }
                     Haptics.click(ctx)
                 }),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -1203,12 +1323,6 @@ fun TrackpadTab() {
                     contentPadding = PaddingValues(horizontal = 10.dp)
                 ) { Text("Clear", fontSize = 11.sp, color = MochaSubtext) }
             }
-
-            Button(
-                onClick = { Hub.key("enter"); Haptics.click(ctx) },
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = HyprSky, contentColor = MochaBackground)
-            ) { Text("↵") }
         }
     }
 }
@@ -1250,20 +1364,20 @@ fun PresenterTab() {
         val gyro = sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         hasGyro = gyro != null
         var ax = 0f; var ay = 0f
-        val listener = object : SensorEventListener {
+                val listener = object : SensorEventListener {
             override fun onSensorChanged(e: SensorEvent) {
                 if (!laser.value) { ax = 0f; ay = 0f; return }
                 val yaw = -e.values[2]
                 val pitch = -e.values[0]
-                // Deadband noise filter (< 0.025 rad/s ignored to kill jitter)
-                if ((yaw * yaw + pitch * pitch) < 0.000625f) return
+                // Deadband noise filter (< 0.02 rad/s ignored to kill jitter)
+                if ((yaw * yaw + pitch * pitch) < 0.0004f) return
 
-                ax += yaw * 32f * sens
-                ay += pitch * 32f * sens
+                ax += yaw * 45f * sens
+                ay += pitch * 45f * sens
                 val dx = ax.toInt()
                 val dy = ay.toInt()
                 if (dx != 0 || dy != 0) {
-                    Hub.move(dx, dy)
+                    Hub.laserMove(dx, dy)
                     ax -= dx
                     ay -= dy
                 }
@@ -1273,7 +1387,13 @@ fun PresenterTab() {
         if (gyro != null) {
             sm.registerListener(listener, gyro, SensorManager.SENSOR_DELAY_GAME)
         }
-        onDispose { sm.unregisterListener(listener) }
+        onDispose {
+            sm.unregisterListener(listener)
+            if (laser.value) {
+                laser.value = false
+                Hub.laserStop()
+            }
+        }
     }
 
     val remaining = if (targetSecs > 0) targetSecs - elapsedSecs else elapsedSecs
@@ -1359,7 +1479,7 @@ fun PresenterTab() {
             }
         }
 
-        // Giant Presentation Slide Buttons (Easy to tap blindly while facing audience)
+        // Giant Presentation Slide Buttons (Equal size for easy blind tapping)
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = { Hub.key("left"); Haptics.click(ctx) },
@@ -1375,14 +1495,14 @@ fun PresenterTab() {
             }
             Button(
                 onClick = { Hub.key("right"); Haptics.click(ctx) },
-                modifier = Modifier.weight(1.3f).fillMaxHeight(),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = HyprSky, contentColor = MochaBackground)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("▶", fontSize = 36.sp)
+                    Text("▶", fontSize = 32.sp)
                     Spacer(Modifier.height(4.dp))
-                    Text("Next Slide", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Next Slide", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1411,7 +1531,7 @@ fun PresenterTab() {
             ) { Text("Exit (Esc)", color = MochaRed, fontSize = 12.sp) }
         }
 
-        // Gyroscope Air Mouse / Laser Pointer
+        // Dedicated Wayland Presentation Laser Pointer (Decoupled from mouse cursor)
         if (hasGyro) {
             Box(
                 Modifier
@@ -1424,25 +1544,23 @@ fun PresenterTab() {
                         detectTapGestures(
                             onPress = {
                                 laser.value = true
+                                Hub.laserStart()
                                 Haptics.click(ctx)
                                 tryAwaitRelease()
                                 laser.value = false
+                                Hub.laserStop()
                                 Haptics.click(ctx)
                             }
                         )
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🎯", fontSize = 22.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (laser.value) "Laser Active · Tilt Phone to Aim" else "Air Laser Pointer (Hold & Aim)",
-                        color = if (laser.value) MochaBackground else MochaText,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
+                Text(
+                    if (laser.value) "Laser Active · Tilt Phone to Aim" else "Presentation Laser (Hold to Aim)",
+                    color = if (laser.value) MochaBackground else MochaText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
             }
         } else {
             Text("No gyroscope sensor found on this phone.", color = MochaSubtext, fontSize = 11.sp)
@@ -1480,9 +1598,9 @@ fun MediaTab() {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Media Playback (MPRIS / playerctl)", color = HyprSky, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    B("⏮ Prev", { Hub.send("media", "action" to "prev") }, Modifier.weight(1f))
-                    B("⏯ Play / Pause", { Hub.send("media", "action" to "play_pause") }, Modifier.weight(1.3f))
-                    B("⏭ Next", { Hub.send("media", "action" to "next") }, Modifier.weight(1f))
+                    B("Prev", { Hub.send("media", "action" to "prev") }, Modifier.weight(1f))
+                    B("Play / Pause", { Hub.send("media", "action" to "play_pause") }, Modifier.weight(1.3f))
+                    B("Next", { Hub.send("media", "action" to "next") }, Modifier.weight(1f))
                 }
             }
         }
@@ -1497,39 +1615,59 @@ fun MediaTab() {
                 Text("System Volume (wpctl)", color = MochaSapphire, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     B("− Down", { Hub.send("volume", "action" to "down") }, Modifier.weight(1f))
-                    B("🔇 Mute", { Hub.send("volume", "action" to "mute") }, Modifier.weight(1f))
+                    B("Mute", { Hub.send("volume", "action" to "mute") }, Modifier.weight(1f))
                     B("+ Up", { Hub.send("volume", "action" to "up") }, Modifier.weight(1f))
                 }
             }
         }
 
+        var brightness by remember { mutableFloatStateOf(80f) }
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MochaBase),
             border = BorderStroke(1.dp, MochaSurface0),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Screen Brightness (brightnessctl)", color = MochaYellow, fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    B("🔅 Dimmer", { Hub.send("brightness", "action" to "down") }, Modifier.weight(1f))
-                    B("🔆 Brighter", { Hub.send("brightness", "action" to "up") }, Modifier.weight(1f))
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Screen Brightness (brightnessctl)", color = MochaYellow, fontWeight = FontWeight.Bold)
+                    Text("${brightness.toInt()}%", color = MochaYellow, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
+                Slider(
+                    value = brightness,
+                    onValueChange = {
+                        brightness = it
+                        Hub.setBrightness(it.toInt())
+                    },
+                    valueRange = 1f..100f,
+                    colors = SliderDefaults.colors(thumbColor = MochaYellow, activeTrackColor = MochaYellow)
+                )
             }
         }
     }
 }
 
-// ───────────────────────── 4. Hyprland: Workspaces, Windows & Quick Actions
+// ───────────────────────── 4. Hyprland: Workspaces, Screen Share & Commands
 @Composable
 fun HyprlandTab() {
     val ctx = LocalContext.current
     val ws by Hub.workspaces.collectAsState()
     val active by Hub.activeWs.collectAsState()
-    val wins by Hub.windows.collectAsState()
     val cmds by Hub.commands.collectAsState()
+    val screenBitmap by Hub.screenFrame.collectAsState()
+    var liveStreaming by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) { Hub.send("ws.list"); Hub.send("cmd.list") }
-    LaunchedEffect(ws, active) { Hub.send("win.list") }
+    LaunchedEffect(liveStreaming) {
+        while (liveStreaming) {
+            Hub.requestScreenCapture()
+            delay(1500)
+        }
+    }
 
     LazyColumn(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
@@ -1558,27 +1696,68 @@ fun HyprlandTab() {
 
         item {
             Spacer(Modifier.height(4.dp))
-            Text("Open Windows (Tap to Focus)", color = MochaSapphire, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-        }
-        if (wins.isEmpty()) {
-            item {
-                Text("No active windows detected", color = MochaSubtext, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-        items(wins) { w ->
             Card(
-                Modifier.fillMaxWidth().clickable {
-                    Hub.send("win.focus", "address" to w.address)
-                    Haptics.click(ctx)
-                },
+                modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MochaBase),
                 border = BorderStroke(1.dp, MochaSurface0),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Column(Modifier.padding(12.dp)) {
-                    Text(w.title, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MochaText, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.height(2.dp))
-                    Text("${w.cls} · Workspace ${w.workspace}", style = MaterialTheme.typography.bodySmall, color = MochaSubtext)
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Screen Share", color = MochaSapphire, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { Hub.requestScreenCapture(); Haptics.click(ctx) },
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, MochaSurface0),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                            ) { Text("Capture", fontSize = 12.sp, color = MochaText) }
+
+                            Button(
+                                onClick = { liveStreaming = !liveStreaming; Haptics.click(ctx) },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (liveStreaming) MochaRed else HyprSky,
+                                    contentColor = MochaBackground
+                                ),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                            ) { Text(if (liveStreaming) "Stop Live" else "Live View", fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                        }
+                    }
+
+                    val bmp = screenBitmap
+                    if (bmp != null) {
+                        Image(
+                            bitmap = bmp.asImageBitmap(),
+                            contentDescription = "Desktop Screen",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(BorderStroke(1.dp, MochaSurface0), RoundedCornerShape(10.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MochaMantle)
+                                .border(BorderStroke(1.dp, MochaSurface0), RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                HyprlandLogo(Modifier.size(36.dp), color = MochaSurface1)
+                                Spacer(Modifier.height(8.dp))
+                                Text("Tap 'Capture' or 'Live View' to stream desktop", color = MochaSubtext, fontSize = 12.sp)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1595,7 +1774,7 @@ fun HyprlandTab() {
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(1.dp, MochaSurface0)
                 ) {
-                    Text("⚡  $c", color = MochaText)
+                    Text(c, color = MochaText)
                 }
             }
         }
@@ -1604,7 +1783,7 @@ fun HyprlandTab() {
 
 // ───────────────────────── 5. Files, Clipboard, Ring & Integrations
 @Composable
-fun FilesTab(onUnpair: () -> Unit) {
+fun FilesTab() {
     val ctx = LocalContext.current
     val ringing by Hub.ringing.collectAsState()
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { Hub.sendFiles(it) }
@@ -1702,17 +1881,6 @@ fun FilesTab(onUnpair: () -> Unit) {
                     border = BorderStroke(1.dp, MochaSurface0)
                 ) { Text("Enable SMS Modem Service", color = MochaText, fontSize = 12.sp) }
             }
-        }
-
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(
-            onClick = onUnpair,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MochaRed),
-            border = BorderStroke(1.dp, MochaRed),
-            shape = RoundedCornerShape(10.dp)
-        ) {
-            Text("Unpair from PC")
         }
     }
 }

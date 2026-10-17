@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""
+HyprConnect Presentation Laser Pointer Overlay
+Renders a glowing presentation laser dot on a Wayland overlay surface.
+Does NOT move or touch the system mouse cursor.
+"""
+import sys
+import threading
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('GtkLayerShell', '0.1')
+from gi.repository import Gtk, GtkLayerShell, GLib, Gdk
+import cairo
+
+class LaserWindow(Gtk.Window):
+    def __init__(self):
+        super().__init__()
+        GtkLayerShell.init_for_window(self)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
+        for edge in (GtkLayerShell.Edge.TOP, GtkLayerShell.Edge.BOTTOM, GtkLayerShell.Edge.LEFT, GtkLayerShell.Edge.RIGHT):
+            GtkLayerShell.set_anchor(self, edge, True)
+        GtkLayerShell.set_exclusive_zone(self, -1)
+        GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
+        self.set_app_paintable(True)
+
+        visual = self.get_screen().get_rgba_visual()
+        if visual:
+            self.set_visual(visual)
+
+        self.connect('draw', self.on_draw)
+        self.realize()
+        # Click-through: zero region for input shape
+        self.get_window().input_shape_combine_region(cairo.Region(), 0, 0)
+
+        self.width = 1920
+        self.height = 1080
+        self.update_dimensions()
+
+        self.visible_dot = False
+        self.x = float(self.width // 2)
+        self.y = float(self.height // 2)
+
+    def update_dimensions(self):
+        try:
+            display = Gdk.Display.get_default()
+            if display:
+                monitor = display.get_primary_monitor() or (display.get_n_monitors() > 0 and display.get_monitor(0))
+                if monitor:
+                    geom = monitor.get_geometry()
+                    self.width = geom.width
+                    self.height = geom.height
+                    return
+        except Exception:
+            pass
+
+    def on_draw(self, widget, cr):
+        cr.set_operator(cairo.OPERATOR_SOURCE)
+        cr.set_source_rgba(0, 0, 0, 0)
+        cr.paint()
+
+        if self.visible_dot:
+            cr.set_operator(cairo.OPERATOR_OVER)
+            # Outer diffuse glow (presentation laser red)
+            cr.set_source_rgba(1.0, 0.1, 0.1, 0.35)
+            cr.arc(self.x, self.y, 16.0, 0, 6.28318)
+            cr.fill()
+
+            # Inner intense glow
+            cr.set_source_rgba(1.0, 0.2, 0.2, 0.75)
+            cr.arc(self.x, self.y, 8.0, 0, 6.28318)
+            cr.fill()
+
+            # Bright center core
+            cr.set_source_rgba(1.0, 0.95, 0.95, 1.0)
+            cr.arc(self.x, self.y, 3.5, 0, 6.28318)
+            cr.fill()
+
+        return False
+
+    def handle_start(self):
+        self.update_dimensions()
+        self.visible_dot = True
+        self.queue_draw()
+
+    def handle_move(self, dx, dy):
+        self.x = max(0.0, min(float(self.width), self.x + dx))
+        self.y = max(0.0, min(float(self.height), self.y + dy))
+        if self.visible_dot:
+            self.queue_draw()
+
+    def handle_stop(self):
+        self.visible_dot = False
+        self.queue_draw()
+
+def stdin_worker(win):
+    for line in sys.stdin:
+        parts = line.strip().split()
+        if not parts:
+            continue
+        cmd = parts[0]
+        if cmd == 'start':
+            GLib.idle_add(win.handle_start)
+        elif cmd == 'stop':
+            GLib.idle_add(win.handle_stop)
+        elif cmd == 'move' and len(parts) >= 3:
+            try:
+                dx = float(parts[1])
+                dy = float(parts[2])
+                GLib.idle_add(win.handle_move, dx, dy)
+            except ValueError:
+                pass
+        elif cmd == 'quit':
+            GLib.idle_add(Gtk.main_quit)
+            break
+
+def main():
+    win = LaserWindow()
+    win.show_all()
+    t = threading.Thread(target=stdin_worker, args=(win,), daemon=True)
+    t.start()
+    Gtk.main()
+
+if __name__ == '__main__':
+    main()

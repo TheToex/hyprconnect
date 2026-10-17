@@ -56,6 +56,7 @@ object Hub {
     val commands = MutableStateFlow<List<String>>(emptyList())
     val ringing = MutableStateFlow(false)
     val toasts = MutableSharedFlow<String>(extraBufferCapacity = 16)
+    val screenFrame = MutableStateFlow<android.graphics.Bitmap?>(null)
 
     lateinit var store: Store
         private set
@@ -71,6 +72,8 @@ object Hub {
     private var pendingDx = 0
     private var pendingDy = 0
     private var pendingScroll = 0
+    private var pendingLaserDx = 0
+    private var pendingLaserDy = 0
 
     fun init(ctx: Context) {
         if (::app.isInitialized) return
@@ -120,6 +123,18 @@ object Hub {
             pendingScroll += dy
         }
     }
+
+    fun laserStart() = send("laser.start")
+    fun laserMove(dx: Int, dy: Int) {
+        synchronized(motionLock) {
+            pendingLaserDx += dx
+            pendingLaserDy += dy
+        }
+    }
+    fun laserStop() = send("laser.stop")
+
+    fun setBrightness(pct: Int) = send("brightness.set", "percent" to pct)
+    fun requestScreenCapture() = send("screen.capture")
 
     fun click(button: String = "left", double: Boolean = false) =
         send("mouse.click", "button" to button, "double" to double)
@@ -205,19 +220,25 @@ object Hub {
 
         val writer = launch { for (m in out) w(m) }
 
-        // Dedicated coalescing motion loop at ~80Hz (12ms)
+        // Dedicated coalescing motion loop at ~200Hz (5ms) for ultra-low latency
         val motionWriter = launch {
             while (isActive) {
                 var dx = 0
                 var dy = 0
                 var sc = 0
+                var ldx = 0
+                var ldy = 0
                 synchronized(motionLock) {
                     dx = pendingDx
                     dy = pendingDy
                     sc = pendingScroll
+                    ldx = pendingLaserDx
+                    ldy = pendingLaserDy
                     pendingDx = 0
                     pendingDy = 0
                     pendingScroll = 0
+                    pendingLaserDx = 0
+                    pendingLaserDy = 0
                 }
                 if (dx != 0 || dy != 0) {
                     w(JSONObject().put("t", "mouse.move").put("dx", dx).put("dy", dy))
@@ -225,7 +246,10 @@ object Hub {
                 if (sc != 0) {
                     w(JSONObject().put("t", "mouse.scroll").put("dy", sc))
                 }
-                delay(12)
+                if (ldx != 0 || ldy != 0) {
+                    w(JSONObject().put("t", "laser.move").put("dx", ldx).put("dy", ldy))
+                }
+                delay(5)
             }
         }
 
@@ -242,6 +266,8 @@ object Hub {
                 pendingDx = 0
                 pendingDy = 0
                 pendingScroll = 0
+                pendingLaserDx = 0
+                pendingLaserDy = 0
             }
             cancelAllReceives()
             runCatching { sock.close() }
@@ -281,6 +307,18 @@ object Hub {
             "file.chunk" -> rxChunk(m)
             "file.end" -> rxEnd(m)
             "file.reject" -> toast("PC refused the file")
+            "screen.frame" -> {
+                val data = m.optString("data")
+                if (data.isNotEmpty()) {
+                    runCatching {
+                        val bytes = Base64.decode(data, Base64.DEFAULT)
+                        val bmp = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        if (bmp != null) {
+                            screenFrame.value = bmp
+                        }
+                    }
+                }
+            }
         }
     }
 

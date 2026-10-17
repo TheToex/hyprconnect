@@ -147,7 +147,80 @@ pub async fn win_list() -> Value {
 }
 
 pub fn ws_switch(id: i64) {
-    spawn("hyprctl", &["dispatch", "workspace", &id.to_string()]);
+    tokio::spawn(async move {
+        let res = output("hyprctl", &["dispatch", &format!("hl.dsp.focus({{workspace = {id}}})")]).await;
+        if res.as_deref() != Some("ok\n") && res.as_deref() != Some("ok") {
+            spawn("hyprctl", &["dispatch", "workspace", &id.to_string()]);
+        }
+    });
+}
+
+pub fn brightness_set(pct: i32) {
+    let pct = pct.clamp(1, 100);
+    spawn("brightnessctl", &["set", &format!("{pct}%")]);
+}
+
+pub async fn capture_screen() -> Option<String> {
+    use base64::{engine::general_purpose::STANDARD as B64, Engine};
+    let out = Command::new("grim")
+        .args(["-t", "jpeg", "-q", "40", "-"])
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .await
+        .ok()?;
+    if out.status.success() && !out.stdout.is_empty() {
+        Some(B64.encode(&out.stdout))
+    } else {
+        None
+    }
+}
+
+static LASER: tokio::sync::Mutex<Option<tokio::process::ChildStdin>> = tokio::sync::Mutex::const_new(None);
+const LASER_SCRIPT: &str = include_str!("../../bin/hyprconnect-laser");
+
+pub async fn laser_start() {
+    let mut guard = LASER.lock().await;
+    if guard.is_none() {
+        let script_path = std::env::var("XDG_RUNTIME_DIR")
+            .map(|r| format!("{r}/hyprconnect-laser"))
+            .unwrap_or_else(|_| "/tmp/hyprconnect-laser".into());
+        let _ = tokio::fs::write(&script_path, LASER_SCRIPT).await;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = tokio::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).await;
+        }
+        let ch = Command::new("python3")
+            .arg(&script_path)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn();
+        if let Ok(mut c) = ch {
+            *guard = c.stdin.take();
+        }
+    }
+    if let Some(stdin) = guard.as_mut() {
+        let _ = stdin.write_all(b"start\n").await;
+    }
+}
+
+pub async fn laser_move(dx: i32, dy: i32) {
+    let mut guard = LASER.lock().await;
+    if let Some(stdin) = guard.as_mut() {
+        let cmd = format!("move {dx} {dy}\n");
+        if stdin.write_all(cmd.as_bytes()).await.is_err() {
+            *guard = None;
+        }
+    }
+}
+
+pub async fn laser_stop() {
+    let mut guard = LASER.lock().await;
+    if let Some(stdin) = guard.as_mut() {
+        let _ = stdin.write_all(b"stop\n").await;
+    }
 }
 
 pub fn win_focus(address: &str) {
@@ -160,3 +233,4 @@ pub fn win_focus(address: &str) {
 pub fn run_shell(cmdline: &str) {
     spawn("sh", &["-c", cmdline]);
 }
+

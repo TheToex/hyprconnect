@@ -58,8 +58,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.hypot
-import kotlin.math.max
-import kotlin.math.min
 
 // ───────────────────────── Hyprland Ice Blue (#89DCEB) & Catppuccin Mocha Palette
 val HyprSky = Color(0xFF89DCEB)
@@ -143,7 +141,7 @@ fun HyprlandLogo(
 object Haptics {
     fun click(ctx: Context) {
         runCatching {
-            if (::Hub.store.isInitialized && !Hub.store.hapticsEnabled) return
+            if (!Hub.store.hapticsEnabled) return
             val vib = if (Build.VERSION.SDK_INT >= 31) {
                 (ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
             } else {
@@ -161,7 +159,7 @@ object Haptics {
 
     fun warning(ctx: Context) {
         runCatching {
-            if (::Hub.store.isInitialized && !Hub.store.hapticsEnabled) return
+            if (!Hub.store.hapticsEnabled) return
             val vib = if (Build.VERSION.SDK_INT >= 31) {
                 (ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
             } else {
@@ -179,7 +177,7 @@ object Haptics {
 
     fun overtime(ctx: Context) {
         runCatching {
-            if (::Hub.store.isInitialized && !Hub.store.hapticsEnabled) return
+            if (!Hub.store.hapticsEnabled) return
             val vib = if (Build.VERSION.SDK_INT >= 31) {
                 (ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
             } else {
@@ -390,6 +388,30 @@ private val TABS = listOf(
     "Files" to "📁"
 )
 
+@Composable
+fun DrawerItem(
+    icon: String,
+    label: String,
+    textColor: Color = MochaText,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = Color.Transparent,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp)
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(icon, fontSize = 20.sp)
+            Spacer(Modifier.width(14.dp))
+            Text(label, color = textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
 // ───────────────────────── Main Screen with Sidebar (Drawer)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -417,7 +439,6 @@ fun MainScreen(onUnpair: () -> Unit) {
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = MochaMantle,
-                drawerContentColor = MochaText,
                 modifier = Modifier.width(310.dp)
             ) {
                 // Drawer Header
@@ -493,34 +514,23 @@ fun MainScreen(onUnpair: () -> Unit) {
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
                 )
 
-                NavigationDrawerItem(
-                    label = { Text("Pair New Device") },
-                    icon = { Text("🔗", fontSize = 18.sp) },
-                    selected = false,
+                DrawerItem(
+                    icon = "🔗",
+                    label = "Pair New Device",
                     onClick = {
                         scope.launch { drawerState.close() }
                         showPairNewDialog = true
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedTextColor = MochaText
-                    )
+                    }
                 )
 
-                NavigationDrawerItem(
-                    label = { Text("Unpair PC", color = MochaRed) },
-                    icon = { Text("✕", fontSize = 18.sp, color = MochaRed) },
-                    selected = false,
+                DrawerItem(
+                    icon = "✕",
+                    label = "Unpair PC",
+                    textColor = MochaRed,
                     onClick = {
                         scope.launch { drawerState.close() }
                         showUnpairConfirm = true
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedTextColor = MochaRed
-                    )
+                    }
                 )
 
                 HorizontalDivider(color = MochaSurface0, modifier = Modifier.padding(vertical = 8.dp))
@@ -534,19 +544,13 @@ fun MainScreen(onUnpair: () -> Unit) {
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
                 )
 
-                NavigationDrawerItem(
-                    label = { Text("Settings") },
-                    icon = { Text("⚙", fontSize = 18.sp) },
-                    selected = false,
+                DrawerItem(
+                    icon = "⚙",
+                    label = "Settings",
                     onClick = {
                         scope.launch { drawerState.close() }
                         showSettingsDialog = true
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedTextColor = MochaText
-                    )
+                    }
                 )
 
                 HorizontalDivider(color = MochaSurface0, modifier = Modifier.padding(vertical = 8.dp))
@@ -560,19 +564,13 @@ fun MainScreen(onUnpair: () -> Unit) {
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
                 )
 
-                NavigationDrawerItem(
-                    label = { Text("About HyprConnect") },
-                    icon = { Text("ℹ", fontSize = 18.sp) },
-                    selected = false,
+                DrawerItem(
+                    icon = "ℹ",
+                    label = "About HyprConnect",
                     onClick = {
                         scope.launch { drawerState.close() }
                         showAboutDialog = true
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-                    colors = NavigationDrawerItemDefaults.colors(
-                        unselectedContainerColor = Color.Transparent,
-                        unselectedTextColor = MochaText
-                    )
+                    }
                 )
 
                 Spacer(Modifier.weight(1f))
@@ -995,7 +993,7 @@ private suspend fun PointerInputScope.trackpadGesture(sensitivity: Float) = awai
         val ev = awaitPointerEvent()
         endMs = ev.changes.first().uptimeMillis
         val pressed: List<PointerInputChange> = ev.changes.filter { it.pressed }
-        maxPointers = max(maxPointers, pressed.size)
+        maxPointers = maxOf(maxPointers, pressed.size)
         if (pressed.size >= 2) {
             val sumY = pressed.fold(0f) { acc, c -> acc + (c.position.y - c.previousPosition.y) }
             val dy = sumY / pressed.size.toFloat()
@@ -1011,7 +1009,8 @@ private suspend fun PointerInputScope.trackpadGesture(sensitivity: Float) = awai
             val dx = c.position.x - c.previousPosition.x
             val dy = c.position.y - c.previousPosition.y
             moved += abs(dx) + abs(dy)
-            val accel = (1.4f + min(hypot(dx, dy) / 18f, 2.4f)) * sensitivity
+            val dist = hypot(dx, dy)
+            val accel = (1.4f + minOf(dist / 18f, 2.4f)) * sensitivity
             accX += dx * accel
             accY += dy * accel
             val ix = accX.toInt()
@@ -1257,7 +1256,7 @@ fun PresenterTab() {
                 val yaw = -e.values[2]
                 val pitch = -e.values[0]
                 // Deadband noise filter (< 0.025 rad/s ignored to kill jitter)
-                if (hypot(yaw, pitch) < 0.025f) return
+                if ((yaw * yaw + pitch * pitch) < 0.000625f) return
 
                 ax += yaw * 32f * sens
                 ay += pitch * 32f * sens

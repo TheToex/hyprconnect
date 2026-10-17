@@ -184,7 +184,7 @@ object Hub {
 
         val rd = BufferedReader(InputStreamReader(sock.inputStream, Charsets.UTF_8))
         val os = sock.outputStream
-        fun w(o: JSONObject) { os.write((o.toString() + "\n").toByteArray()); os.flush() }
+        fun w(o: JSONObject) { synchronized(os) { os.write((o.toString() + "\n").toByteArray()); os.flush() } }
 
         val hello = JSONObject().put("t", "hello").put("id", store.deviceId)
             .put("name", store.deviceName)

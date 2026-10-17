@@ -22,12 +22,22 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -385,10 +395,11 @@ private suspend fun PointerInputScope.touchpad() = awaitEachGesture {
     do {
         val ev = awaitPointerEvent()
         endMs = ev.changes.first().uptimeMillis
-        val pressed = ev.changes.filter { it.pressed }
+        val pressed: List<PointerInputChange> = ev.changes.filter { it.pressed }
         maxPointers = max(maxPointers, pressed.size)
         if (pressed.size >= 2) {
-            val dy = pressed.map { it.position.y - it.previousPosition.y }.average().toFloat()
+            val sumY = pressed.fold(0f) { acc, c -> acc + (c.position.y - c.previousPosition.y) }
+            val dy = sumY / pressed.size.toFloat()
             moved += abs(dy)
             scrollAcc += dy
             val steps = (scrollAcc / 14f).toInt()

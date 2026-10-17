@@ -2,20 +2,19 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <!-- Hyprland Origami Logo for Status Bar Notification -->
     <!-- Left Wing -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M 54,31.32 L 35.64,71.28 L 45.36,71.28 L 54,51.84 Z" />
+        android:pathData="M 12,2.5 L 3.5,21.5 L 8,21.5 L 12,12 Z" />
     <!-- Right Wing -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M 54,31.32 L 54,51.84 L 62.64,71.28 L 72.36,71.28 Z" />
+        android:pathData="M 12,2.5 L 12,12 L 16,21.5 L 20.5,21.5 Z" />
     <!-- Center Origami Facet -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M 54,51.84 L 47.52,65.88 L 60.48,65.88 Z" />
+        android:pathData="M 12,12 L 9,18.5 L 15,18.5 Z" />
 </vector>
-

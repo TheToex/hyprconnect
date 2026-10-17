@@ -25,6 +25,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -357,7 +359,7 @@ fun PairScreen(onPaired: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = HyprSky, contentColor = MochaBackground),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("📷  Scan QR Code", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text("Scan QR Code", fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
 
         OutlinedTextField(
@@ -565,6 +567,7 @@ fun MainScreen(onUnpair: () -> Unit) {
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = MochaMantle,
@@ -862,7 +865,7 @@ fun MainScreen(onUnpair: () -> Unit) {
                         colors = ButtonDefaults.buttonColors(containerColor = HyprSky, contentColor = MochaBackground),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("📷  Scan Terminal QR")
+                        Text("Scan Terminal QR")
                     }
                     OutlinedTextField(
                         value = manualUrl,
@@ -1496,28 +1499,42 @@ fun PresenterTab() {
             }
         }
 
+        val prevInteractionSource = remember { MutableInteractionSource() }
+        val isPrevPressed by prevInteractionSource.collectIsPressedAsState()
+
+        val nextInteractionSource = remember { MutableInteractionSource() }
+        val isNextPressed by nextInteractionSource.collectIsPressedAsState()
+
         // Giant Presentation Slide Buttons (Equal size for easy blind tapping)
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = { Hub.key("left"); Haptics.click(ctx) },
+                interactionSource = prevInteractionSource,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MochaSurface0, contentColor = MochaText)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isPrevPressed) HyprSky else MochaSurface0,
+                    contentColor = if (isPrevPressed) MochaBackground else MochaText
+                )
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("◀", fontSize = 32.sp, color = HyprSky)
+                    Text("◀", fontSize = 32.sp, color = if (isPrevPressed) MochaBackground else HyprSky)
                     Spacer(Modifier.height(4.dp))
                     Text("Prev Slide", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             Button(
                 onClick = { Hub.key("right"); Haptics.click(ctx) },
+                interactionSource = nextInteractionSource,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = HyprSky, contentColor = MochaBackground)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isNextPressed) HyprSky else MochaSurface0,
+                    contentColor = if (isNextPressed) MochaBackground else MochaText
+                )
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("▶", fontSize = 32.sp)
+                    Text("▶", fontSize = 32.sp, color = if (isNextPressed) MochaBackground else HyprSky)
                     Spacer(Modifier.height(4.dp))
                     Text("Next Slide", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
@@ -1558,17 +1575,18 @@ fun PresenterTab() {
                     .background(if (laser.value) HyprSky else MochaBase)
                     .border(BorderStroke(1.5.dp, if (laser.value) HyprSky else MochaSurface0), RoundedCornerShape(16.dp))
                     .pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                laser.value = true
-                                Hub.laserStart()
-                                Haptics.click(ctx)
-                                tryAwaitRelease()
-                                laser.value = false
-                                Hub.laserStop()
-                                Haptics.click(ctx)
-                            }
-                        )
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            laser.value = true
+                            Hub.laserStart()
+                            Haptics.click(ctx)
+                            do {
+                                val event = awaitPointerEvent()
+                            } while (event.changes.any { it.pressed })
+                            laser.value = false
+                            Hub.laserStop()
+                            Haptics.click(ctx)
+                        }
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -1596,14 +1614,28 @@ fun PresenterTab() {
 fun MediaTab() {
     val ctx = LocalContext.current
     @Composable
-    fun B(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) =
+    fun B(
+        label: String,
+        onClick: () -> Unit,
+        modifier: Modifier = Modifier,
+        fontSize: androidx.compose.ui.unit.TextUnit = 14.sp
+    ) =
         Button(
             onClick = { onClick(); Haptics.click(ctx) },
-            modifier = modifier.height(56.dp),
+            modifier = modifier.height(54.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MochaBase, contentColor = MochaText),
             border = BorderStroke(1.dp, MochaSurface0)
-        ) { Text(label, fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
+        ) {
+            Text(
+                label,
+                fontSize = fontSize,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Card(
@@ -1614,9 +1646,9 @@ fun MediaTab() {
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Media Playback", color = HyprSky, fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     B("Prev", { Hub.send("media", "action" to "prev") }, Modifier.weight(1f))
-                    B("Play / Pause", { Hub.send("media", "action" to "play_pause") }, Modifier.weight(1.3f))
+                    B("Play / Pause", { Hub.send("media", "action" to "play_pause") }, Modifier.weight(1.5f), fontSize = 13.sp)
                     B("Next", { Hub.send("media", "action" to "next") }, Modifier.weight(1f))
                 }
             }
@@ -1638,7 +1670,8 @@ fun MediaTab() {
             }
         }
 
-        var brightness by remember { mutableFloatStateOf(80f) }
+        LaunchedEffect(Unit) { Hub.getBrightness() }
+        val brightness = Hub.brightness.floatValue
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MochaBase),
@@ -1655,9 +1688,9 @@ fun MediaTab() {
                     Text("${brightness.toInt()}%", color = MochaYellow, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
                 Slider(
-                    value = brightness,
+                    value = brightness.coerceIn(1f, 100f),
                     onValueChange = {
-                        brightness = it
+                        Hub.brightness.floatValue = it
                         Hub.setBrightness(it.toInt())
                     },
                     valueRange = 1f..100f,
@@ -1675,16 +1708,22 @@ fun HyprlandTab() {
     val ws by Hub.workspaces.collectAsState()
     val active by Hub.activeWs.collectAsState()
     val cmds by Hub.commands.collectAsState()
-    val screenBitmap by Hub.screenFrame.collectAsState()
-    var liveStreaming by remember { mutableStateOf(false) }
+    val isMirroring by MirrorManager.isMirroring.collectAsState()
 
-    LaunchedEffect(Unit) { Hub.send("ws.list"); Hub.send("cmd.list") }
-    LaunchedEffect(liveStreaming) {
-        while (liveStreaming) {
-            Hub.requestScreenCapture()
-            delay(1500)
+    val mediaProjectionManager = remember {
+        ctx.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as android.media.projection.MediaProjectionManager
+    }
+    val mirrorLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        if (res.resultCode == android.app.Activity.RESULT_OK && res.data != null) {
+            MirrorManager.start(ctx, res.resultCode, res.data!!)
+        } else {
+            Hub.toast("Screen share permission cancelled")
         }
     }
+
+    LaunchedEffect(Unit) { Hub.send("ws.list"); Hub.send("cmd.list") }
 
     LazyColumn(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
@@ -1728,61 +1767,51 @@ fun HyprlandTab() {
                 border = BorderStroke(1.dp, MochaSurface0),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Screen Share", color = MochaSapphire, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
-                                onClick = { Hub.requestScreenCapture(); Haptics.click(ctx) },
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(1.dp, MochaSurface0),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                            ) { Text("Capture", fontSize = 12.sp, color = MochaText) }
-
-                            Button(
-                                onClick = { liveStreaming = !liveStreaming; Haptics.click(ctx) },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (liveStreaming) MochaRed else HyprSky,
-                                    contentColor = MochaBackground
-                                ),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                            ) { Text(if (liveStreaming) "Stop Live" else "Live View", fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                        }
-                    }
-
-                    val bmp = screenBitmap
-                    if (bmp != null) {
-                        Image(
-                            bitmap = bmp.asImageBitmap(),
-                            contentDescription = "Desktop Screen",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .border(BorderStroke(1.dp, MochaSurface0), RoundedCornerShape(10.dp)),
-                            contentScale = ContentScale.Fit
-                        )
-                    } else {
+                        Text("Screen Mirroring to PC", color = MochaSapphire, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(160.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(MochaMantle)
-                                .border(BorderStroke(1.dp, MochaSurface0), RoundedCornerShape(10.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                HyprlandLogo(Modifier.size(36.dp), color = MochaSurface1)
-                                Spacer(Modifier.height(8.dp))
-                                Text("Tap 'Capture' or 'Live View' to stream desktop", color = MochaSubtext, fontSize = 12.sp)
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(if (isMirroring) MochaGreen else MochaSurface2)
+                        )
+                    }
+
+                    Text(
+                        if (isMirroring)
+                            "Live streaming phone screen to a floating window on your Hyprland desktop."
+                        else
+                            "Opens a floating window on your Hyprland desktop and mirrors your phone display live.",
+                        color = MochaSubtext,
+                        fontSize = 13.sp
+                    )
+
+                    Button(
+                        onClick = {
+                            if (isMirroring) {
+                                MirrorManager.stop()
+                            } else {
+                                mirrorLauncher.launch(mediaProjectionManager.createScreenCaptureIntent())
                             }
-                        }
+                            Haptics.click(ctx)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isMirroring) MochaRed else HyprSky,
+                            contentColor = MochaBackground
+                        )
+                    ) {
+                        Text(
+                            if (isMirroring) "Stop Sharing Screen" else "Share Phone Screen to Linux",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }

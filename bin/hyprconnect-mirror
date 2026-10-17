@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""
+HyprConnect Phone Screen Mirror Window
+Displays live mirrored frames from the phone in a dedicated Hyprland floating window.
+"""
+import sys
+import os
+import threading
+import base64
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk, GdkPixbuf, GLib
+
+class MirrorWindow(Gtk.Window):
+    def __init__(self, title="HyprConnect Phone Screen", width=420, height=750):
+        super().__init__(title=title)
+        self.set_default_size(width, height)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        self.connect("destroy", self.on_destroy)
+
+        self.image = Gtk.Image()
+        self.add(self.image)
+        self.current_pixbuf = None
+        self.pending_pixbuf = None
+        self.update_scheduled = False
+        self.lock = threading.Lock()
+        self.connect("size-allocate", self.on_resize)
+
+    def on_resize(self, widget, allocation):
+        if self.current_pixbuf:
+            self._update_display(allocation.width, allocation.height)
+
+    def on_destroy(self, *args):
+        try:
+            print("closed", flush=True)
+        except Exception:
+            pass
+        Gtk.main_quit()
+
+    def update_frame(self, b64_data):
+        try:
+            raw = base64.b64decode(b64_data)
+            loader = GdkPixbuf.PixbufLoader.new_with_type("jpeg")
+            loader.write(raw)
+            loader.close()
+            pixbuf = loader.get_pixbuf()
+            if pixbuf:
+                with self.lock:
+                    self.pending_pixbuf = pixbuf
+                    if not self.update_scheduled:
+                        self.update_scheduled = True
+                        GLib.idle_add(self._apply_frame)
+        except Exception:
+            pass
+
+    def _apply_frame(self):
+        with self.lock:
+            pixbuf = self.pending_pixbuf
+            self.pending_pixbuf = None
+            self.update_scheduled = False
+        if pixbuf:
+            self.current_pixbuf = pixbuf
+            alloc = self.get_allocation()
+            self._update_display(alloc.width, alloc.height)
+        return False
+
+    def _update_display(self, win_w, win_h):
+        if not self.current_pixbuf or win_w <= 10 or win_h <= 10:
+            return
+        orig_w = self.current_pixbuf.get_width()
+        orig_h = self.current_pixbuf.get_height()
+        scale = min(win_w / orig_w, win_h / orig_h)
+        target_w = max(1, int(orig_w * scale))
+        target_h = max(1, int(orig_h * scale))
+        scaled = self.current_pixbuf.scale_simple(target_w, target_h, GdkPixbuf.InterpType.BILINEAR)
+        if scaled:
+            self.image.set_from_pixbuf(scaled)
+
+def stdin_loop(win):
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith("frame "):
+            b64 = line[6:].strip()
+            win.update_frame(b64)
+        elif line == "stop" or line == "quit":
+            GLib.idle_add(Gtk.main_quit)
+            break
+
+def main():
+    title = sys.argv[1] if len(sys.argv) > 1 else "HyprConnect Phone Screen"
+    try:
+        w = int(sys.argv[2]) if len(sys.argv) > 2 else 420
+        h = int(sys.argv[3]) if len(sys.argv) > 3 else 750
+    except ValueError:
+        w, h = 420, 750
+    win = MirrorWindow(title=title, width=w, height=h)
+    win.show_all()
+    t = threading.Thread(target=stdin_loop, args=(win,), daemon=True)
+    t.start()
+    Gtk.main()
+
+if __name__ == "__main__":
+    main()

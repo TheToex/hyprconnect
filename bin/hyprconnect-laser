@@ -43,6 +43,11 @@ class LaserWindow(Gtk.Window):
         self.x = float(self.width // 2)
         self.y = float(self.height // 2)
 
+        self.pending_dx = 0.0
+        self.pending_dy = 0.0
+        self.update_scheduled = False
+        self.lock = threading.Lock()
+
     def update_dimensions(self):
         try:
             display = Gdk.Display.get_default()
@@ -82,17 +87,42 @@ class LaserWindow(Gtk.Window):
 
     def handle_start(self):
         self.update_dimensions()
+        # Reset pointer position to center of screen upon start
+        self.x = float(self.width // 2)
+        self.y = float(self.height // 2)
+        with self.lock:
+            self.pending_dx = 0.0
+            self.pending_dy = 0.0
         self.visible_dot = True
         self.queue_draw()
 
-    def handle_move(self, dx, dy):
+    def schedule_move(self, dx, dy):
+        with self.lock:
+            self.pending_dx += dx
+            self.pending_dy += dy
+            if not self.update_scheduled:
+                self.update_scheduled = True
+                GLib.idle_add(self._flush_move)
+
+    def _flush_move(self):
+        with self.lock:
+            dx = self.pending_dx
+            dy = self.pending_dy
+            self.pending_dx = 0.0
+            self.pending_dy = 0.0
+            self.update_scheduled = False
+
         self.x = max(0.0, min(float(self.width), self.x + dx))
         self.y = max(0.0, min(float(self.height), self.y + dy))
         if self.visible_dot:
             self.queue_draw()
+        return False
 
     def handle_stop(self):
         self.visible_dot = False
+        with self.lock:
+            self.pending_dx = 0.0
+            self.pending_dy = 0.0
         self.queue_draw()
 
 def stdin_worker(win):
@@ -109,7 +139,7 @@ def stdin_worker(win):
             try:
                 dx = float(parts[1])
                 dy = float(parts[2])
-                GLib.idle_add(win.handle_move, dx, dy)
+                win.schedule_move(dx, dy)
             except ValueError:
                 pass
         elif cmd == 'quit':
@@ -125,4 +155,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

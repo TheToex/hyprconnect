@@ -8,14 +8,15 @@
     <!-- Left Wing -->
     <path
         android:fillColor="#89DCEB"
-        android:pathData="M 54,31.32 L 35.64,71.28 L 45.36,71.28 L 54,51.84 Z" />
+        android:pathData="M 54,18 L 19.5,86 L 37.8,86 L 54,52 Z" />
     <!-- Right Wing -->
     <path
-        android:fillColor="#74C7EC"
-        android:pathData="M 54,31.32 L 54,51.84 L 62.64,71.28 L 72.36,71.28 Z" />
-    <!-- Center Origami Facet -->
+        android:fillColor="#89DCEB"
+        android:fillAlpha="0.80"
+        android:pathData="M 54,18 L 54,52 L 70.2,86 L 88.5,86 Z" />
+    <!-- Center Origami Facet (Between the legs - unified #89DCEB) -->
     <path
-        android:fillColor="#B4BEFE"
-        android:pathData="M 54,51.84 L 47.52,65.88 L 60.48,65.88 Z" />
+        android:fillColor="#89DCEB"
+        android:fillAlpha="0.92"
+        android:pathData="M 54,52 L 41,80 L 67,80 Z" />
 </vector>
-

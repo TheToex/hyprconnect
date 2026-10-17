@@ -114,6 +114,21 @@ enum In {
     Brightness { action: String },
     #[serde(rename = "brightness.set")]
     BrightnessSet { percent: i32 },
+    #[serde(rename = "brightness.get")]
+    BrightnessGet,
+    #[serde(rename = "mirror.start")]
+    MirrorStart {
+        #[serde(default)]
+        title: Option<String>,
+        #[serde(default)]
+        width: Option<i32>,
+        #[serde(default)]
+        height: Option<i32>,
+    },
+    #[serde(rename = "mirror.frame")]
+    MirrorFrame { data: String },
+    #[serde(rename = "mirror.stop")]
+    MirrorStop,
     #[serde(rename = "screen.capture")]
     ScreenCapture,
     #[serde(rename = "laser.start")]
@@ -272,6 +287,9 @@ async fn handle(st: Arc<State>, tcp: TcpStream) -> Result<()> {
     });
 
     let _ = tx.send(sys::ws_state().await).await;
+    if let Some(b) = sys::get_brightness().await {
+        let _ = tx.send(json!({"t":"brightness.status","percent":b})).await;
+    }
 
     let mut files: HashMap<String, Incoming> = HashMap::new();
     let res: Result<()> = async {
@@ -295,6 +313,8 @@ async fn handle(st: Arc<State>, tcp: TcpStream) -> Result<()> {
     for (_, f) in files {
         let _ = tokio::fs::remove_file(f.part).await;
     }
+    sys::mirror_stop().await;
+    sys::laser_stop().await;
     // only drop our own session entry
     {
         let mut s = st.sessions.lock().unwrap();
@@ -363,8 +383,30 @@ async fn on_msg(st: &Arc<State>, id: &str, tx: &mpsc::Sender<Value>, files: &mut
         }
         In::Media { action } => sys::media(&action),
         In::Volume { action } => sys::volume(&action),
-        In::Brightness { action } => sys::brightness(&action),
-        In::BrightnessSet { percent } => sys::brightness_set(percent),
+        In::Brightness { action } => {
+            sys::brightness(&action);
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            if let Some(b) = sys::get_brightness().await {
+                let _ = tx.send(json!({"t":"brightness.status","percent":b})).await;
+            }
+        }
+        In::BrightnessSet { percent } => {
+            sys::brightness_set(percent);
+            let _ = tx.send(json!({"t":"brightness.status","percent":percent})).await;
+        }
+        In::BrightnessGet => {
+            if let Some(b) = sys::get_brightness().await {
+                let _ = tx.send(json!({"t":"brightness.status","percent":b})).await;
+            }
+        }
+        In::MirrorStart { title, width, height } => {
+            let t = title.unwrap_or_else(|| "HyprConnect Phone Screen".into());
+            let w = width.unwrap_or(420);
+            let h = height.unwrap_or(750);
+            sys::mirror_start(&t, w, h, tx.clone()).await;
+        }
+        In::MirrorFrame { data } => sys::mirror_frame(&data).await,
+        In::MirrorStop => sys::mirror_stop().await,
         In::ScreenCapture => {
             if let Some(f) = sys::capture_screen().await {
                 let _ = tx.send(json!({"t":"screen.frame","data":f})).await;

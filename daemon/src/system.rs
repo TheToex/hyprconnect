@@ -1,7 +1,7 @@
 //! Thin wrappers around the tools a Hyprland desktop already has.
 use serde_json::{json, Value};
 use std::process::Stdio;
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 use tokio::process::Command;
 
 pub fn spawn(prog: &str, args: &[&str]) {
@@ -160,6 +160,22 @@ pub fn brightness_set(pct: i32) {
     spawn("brightnessctl", &["set", &format!("{pct}%")]);
 }
 
+pub async fn get_brightness() -> Option<i32> {
+    if let Ok(out) = Command::new("brightnessctl").arg("-m").output().await {
+        if out.status.success() {
+            let s = String::from_utf8_lossy(&out.stdout);
+            // format: intel_backlight,backlight,21333,100%,21333
+            if let Some(pct_str) = s.lines().next().and_then(|l| l.split(',').nth(3)) {
+                let clean = pct_str.trim().trim_end_matches('%');
+                if let Ok(val) = clean.parse::<i32>() {
+                    return Some(val);
+                }
+            }
+        }
+    }
+    None
+}
+
 pub async fn capture_screen() -> Option<String> {
     use base64::{engine::general_purpose::STANDARD as B64, Engine};
     let out = Command::new("grim")
@@ -221,6 +237,83 @@ pub async fn laser_move(dx: i32, dy: i32) {
 pub async fn laser_stop() {
     let mut guard = LASER.lock().await;
     if let Some(stdin) = guard.as_mut() {
+        let _ = stdin.write_all(b"stop\n").await;
+        let _ = stdin.flush().await;
+    }
+}
+
+static MIRROR: tokio::sync::Mutex<Option<tokio::process::ChildStdin>> = tokio::sync::Mutex::const_new(None);
+const MIRROR_SCRIPT: &str = include_str!("../../bin/hyprconnect-mirror");
+
+pub async fn mirror_start(title: &str, width: i32, height: i32, tx: tokio::sync::mpsc::Sender<serde_json::Value>) {
+    let mut guard = MIRROR.lock().await;
+    if let Some(mut old) = guard.take() {
+        let _ = old.write_all(b"quit\n").await;
+        let _ = old.flush().await;
+    }
+    let script_path = std::env::var("XDG_RUNTIME_DIR")
+        .map(|r| format!("{r}/hyprconnect-mirror"))
+        .unwrap_or_else(|_| "/tmp/hyprconnect-mirror".into());
+    let _ = tokio::fs::write(&script_path, MIRROR_SCRIPT).await;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = tokio::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755)).await;
+    }
+    let mut child = match Command::new("python3")
+        .arg("-u")
+        .arg(&script_path)
+        .arg(title)
+        .arg(width.to_string())
+        .arg(height.to_string())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("failed to spawn mirror window: {e}");
+            return;
+        }
+    };
+
+    *guard = child.stdin.take();
+
+    // Notify hyprctl to float mirror window if possible
+    spawn("hyprctl", &["dispatch", "setfloating", "title:^HyprConnect.*"]);
+
+    tokio::spawn(async move {
+        if let Some(stdout) = child.stdout.take() {
+            let mut reader = tokio::io::BufReader::new(stdout);
+            let mut line = String::new();
+            while let Ok(n) = reader.read_line(&mut line).await {
+                if n == 0 { break; }
+                if line.trim() == "closed" {
+                    let _ = tx.send(serde_json::json!({"t":"mirror.stopped"})).await;
+                    break;
+                }
+                line.clear();
+            }
+        }
+        let _ = child.wait().await;
+        let _ = tx.send(serde_json::json!({"t":"mirror.stopped"})).await;
+    });
+}
+
+pub async fn mirror_frame(data: &str) {
+    let mut guard = MIRROR.lock().await;
+    if let Some(stdin) = guard.as_mut() {
+        let cmd = format!("frame {data}\n");
+        if stdin.write_all(cmd.as_bytes()).await.is_err() || stdin.flush().await.is_err() {
+            *guard = None;
+        }
+    }
+}
+
+pub async fn mirror_stop() {
+    let mut guard = MIRROR.lock().await;
+    if let Some(mut stdin) = guard.take() {
         let _ = stdin.write_all(b"stop\n").await;
         let _ = stdin.flush().await;
     }

@@ -14,12 +14,17 @@ import android.os.IBinder
 
 /** Keeps the process (and so the link to the PC) alive while the screen is off. */
 class ConnectionService : Service() {
+    companion object {
+        var instance: ConnectionService? = null
+    }
+
     private val battery = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) = Hub.sendBattery(i)
     }
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         Hub.init(this)
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(
@@ -47,7 +52,28 @@ class ConnectionService : Service() {
         return START_STICKY
     }
 
+    fun updateForeground(mirroring: Boolean) {
+        val open = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
+        )
+        val text = if (mirroring) "Sharing screen with ${Hub.store.pcName}" else "Linked to ${Hub.store.pcName}"
+        val n = Notification.Builder(this, "link")
+            .setContentTitle("HyprConnect")
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentIntent(open)
+            .setOngoing(true)
+            .build()
+        val type = if (mirroring) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+        } else {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+        }
+        startForeground(1, n, type)
+    }
+
     override fun onDestroy() {
+        if (instance == this) instance = null
         runCatching { unregisterReceiver(battery) }
         super.onDestroy()
     }

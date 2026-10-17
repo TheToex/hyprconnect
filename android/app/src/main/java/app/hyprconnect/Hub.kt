@@ -17,6 +17,7 @@ import android.telephony.SmsManager
 import android.util.Base64
 import android.util.Log
 import android.webkit.MimeTypeMap
+import androidx.compose.runtime.mutableFloatStateOf
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -57,6 +58,7 @@ object Hub {
     val ringing = MutableStateFlow(false)
     val toasts = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val screenFrame = MutableStateFlow<android.graphics.Bitmap?>(null)
+    val brightness = mutableFloatStateOf(100f)
 
     lateinit var store: Store
         private set
@@ -134,6 +136,7 @@ object Hub {
     fun laserStop() = send("laser.stop")
 
     fun setBrightness(pct: Int) = send("brightness.set", "percent" to pct)
+    fun getBrightness() = send("brightness.get")
     fun requestScreenCapture() = send("screen.capture")
 
     fun click(button: String = "left", double: Boolean = false) =
@@ -254,6 +257,7 @@ object Hub {
         }
 
         send("cmd.list")
+        send("brightness.get")
         try {
             while (true) {
                 val line = rd.readLine() ?: break
@@ -318,6 +322,12 @@ object Hub {
                         }
                     }
                 }
+            }
+            "brightness.status" -> {
+                brightness.floatValue = m.optInt("percent", 100).toFloat()
+            }
+            "mirror.stopped" -> {
+                MirrorManager.stop()
             }
         }
     }

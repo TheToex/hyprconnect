@@ -308,7 +308,7 @@ fun PairScreen(onPaired: () -> Unit) {
             fontWeight = FontWeight.Bold
         )
         Text(
-            "Wayland Companion for Hyprland",
+            "Wayland Remote Control for Hyprland",
             color = MochaSubtext,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -595,7 +595,7 @@ fun MainScreen(onUnpair: () -> Unit) {
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Hyprland Companion",
+                                "Hyprland Remote Control",
                                 color = MochaSubtext,
                                 fontSize = 12.sp
                             )
@@ -786,23 +786,53 @@ fun MainScreen(onUnpair: () -> Unit) {
 
                 Spacer(Modifier.weight(1f))
 
-                // Drawer Footer
+                // Drawer Footer with GitHub Link
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        "HyprConnect v0.1.0 (Beta)",
-                        color = MochaSubtext,
-                        fontSize = 11.sp
-                    )
-                    Text(
-                        "Wayland / uinput Native",
-                        color = HyprSkyDim,
-                        fontSize = 10.sp
-                    )
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/TheToex/hyprconnect"))
+                            ctx.startActivity(browserIntent)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, MochaSurface0),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = MochaBase,
+                            contentColor = MochaText
+                        )
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🐙", fontSize = 14.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "GitHub Repository",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MochaText
+                            )
+                        }
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "HyprConnect v1.0",
+                            color = MochaSubtext,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "Wayland / uinput Native",
+                            color = HyprSkyDim,
+                            fontSize = 10.sp
+                        )
+                    }
                 }
             }
         }
@@ -1183,7 +1213,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    "HyprConnect is a lightweight, Wayland-native KDE Connect alternative tailored specifically for Hyprland.",
+                    "HyprConnect is a lightweight, Wayland-native remote control and companion tailored specifically for Hyprland.",
                     fontSize = 13.sp,
                     color = MochaText
                 )
@@ -1195,7 +1225,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Version: 0.1.0 Beta", color = HyprSky, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Version: 1.0", color = HyprSky, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Text("Protocol: uinput / hyprctl", color = MochaSubtext, fontSize = 11.sp)
                         Text("Host: ${Hub.store.host ?: "N/A"}:${Hub.store.port}", color = MochaSubtext, fontSize = 11.sp)
                         Text(
@@ -1208,10 +1238,28 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 }
 
                 Text(
-                    "Features:\n• 80Hz Coalesced Mouse & Gyro Laser\n• Direct uinput live keyboard typing\n• University Presentation remote with timer\n• Hyprland Workspaces & Window switcher",
+                    "Features:\n• 80Hz Coalesced Mouse & Gyro Laser\n• Direct uinput live keyboard typing\n• University Presentation remote with timer\n• Hyprland Workspaces & Window switcher\n• Live Phone Screen Mirroring to Desktop",
                     fontSize = 12.sp,
                     color = MochaSubtext
                 )
+
+                OutlinedButton(
+                    onClick = {
+                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/TheToex/hyprconnect"))
+                        ctx.startActivity(browserIntent)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(36.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, MochaSurface0),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = HyprSky)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("🐙", fontSize = 12.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Text("github.com/TheToex/hyprconnect", fontSize = 11.sp, color = HyprSky)
+                    }
+                }
             }
         },
         confirmButton = {

@@ -37,6 +37,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: android
 
       - name: Make Gradlew Executable
         run: chmod +x gradlew
@@ -45,6 +47,13 @@ jobs:
       - name: Build APK with Gradle Wrapper
         run: ./gradlew assembleDebug --no-daemon --stacktrace
         working-directory: android
+
+      - name: Upload Build Reports on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Reports-Failure
+          path: android/app/build/reports/
 
       - name: Prepare APK Output
         run: |

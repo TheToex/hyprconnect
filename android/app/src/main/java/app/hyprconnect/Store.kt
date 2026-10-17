@@ -33,6 +33,22 @@ class Store(ctx: Context) {
         get() = p.getString("pcname", "PC") ?: "PC"
         set(v) = p.edit().putString("pcname", v).apply()
 
+    var deviceName: String
+        get() = p.getString("devicename", android.os.Build.MODEL ?: "Android Phone") ?: "Android Phone"
+        set(v) = p.edit().putString("devicename", v).apply()
+
+    var pointerSens: Float
+        get() = p.getFloat("pointer_sens", 1.5f)
+        set(v) = p.edit().putFloat("pointer_sens", v).apply()
+
+    var gyroSens: Float
+        get() = p.getFloat("gyro_sens", 1.6f)
+        set(v) = p.edit().putFloat("gyro_sens", v).apply()
+
+    var hapticsEnabled: Boolean
+        get() = p.getBoolean("haptics_enabled", true)
+        set(v) = p.edit().putBoolean("haptics_enabled", v).apply()
+
     val hasPairing: Boolean get() = fp != null && (secret != null || token != null)
 
     fun savePairing(host: String, port: Int, fp: String, token: String, name: String) {

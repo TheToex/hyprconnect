@@ -67,6 +67,11 @@ object Hub {
     private var ringtone: Ringtone? = null
     private var lastBattery: Pair<Int, Boolean>? = null
 
+    private val motionLock = Any()
+    private var pendingDx = 0
+    private var pendingDy = 0
+    private var pendingScroll = 0
+
     fun init(ctx: Context) {
         if (::app.isInitialized) return
         app = ctx.applicationContext
@@ -92,7 +97,7 @@ object Hub {
 
     fun toast(s: String) { toasts.tryEmit(s) }
 
-    // ---- sending helpers (UI never blocks: input events are dropped if the link is congested)
+    // ---- sending helpers
     fun send(o: JSONObject) { out.trySend(o) }
     private suspend fun sendAwait(o: JSONObject) = out.send(o)
     fun send(t: String, vararg kv: Pair<String, Any>) {
@@ -101,13 +106,27 @@ object Hub {
         send(o)
     }
 
-    fun move(dx: Int, dy: Int) = send("mouse.move", "dx" to dx, "dy" to dy)
-    fun scroll(dy: Int) = send("mouse.scroll", "dy" to dy)
+    /** Smooth coalesced pointer movement (80Hz delivery without packet drops) */
+    fun move(dx: Int, dy: Int) {
+        synchronized(motionLock) {
+            pendingDx += dx
+            pendingDy += dy
+        }
+    }
+
+    /** Smooth coalesced wheel scrolling */
+    fun scroll(dy: Int) {
+        synchronized(motionLock) {
+            pendingScroll += dy
+        }
+    }
+
     fun click(button: String = "left", double: Boolean = false) =
         send("mouse.click", "button" to button, "double" to double)
     fun key(k: String, vararg mods: String) =
         send(JSONObject().put("t", "key").put("key", k).put("mods", org.json.JSONArray(mods.toList())))
     fun text(s: String) = send("text", "text" to s)
+    fun char(c: Char) = text(c.toString())
 
     // ---- connection loop
     private suspend fun loop() {
@@ -122,12 +141,10 @@ object Hub {
             } catch (e: Rejected) {
                 Log.w(TAG, "rejected: ${e.message}")
                 toast("PC rejected the connection: ${e.message}")
-                // pairing token expired or we were unpaired: stop retrying
                 conn.value = Conn.Off
                 return
             } catch (e: Exception) {
                 Log.w(TAG, "link error: $e")
-                // PC may have a new IP: try mDNS
                 store.fp?.let { fp ->
                     Discovery.find(app, fp)?.let { (h, p) -> store.host = h; store.port = p }
                 }
@@ -154,6 +171,7 @@ object Hub {
         val raw = Socket().apply { tcpNoDelay = true; connect(InetSocketAddress(host, port), 5000) }
         val s = ctx.socketFactory.createSocket(raw, host, port, true) as SSLSocket
         s.soTimeout = 0
+        s.tcpNoDelay = true
         s.startHandshake()
         return s
     }
@@ -162,7 +180,6 @@ object Hub {
         val host = store.host ?: throw IllegalStateException("no host")
         val fp = store.fp ?: throw IllegalStateException("no fingerprint")
         val sock = tlsSocket(host, store.port, fp)
-        // closing the socket is what unblocks readLine() when we get cancelled
         launch { try { awaitCancellation() } finally { runCatching { sock.close() } } }
 
         val rd = BufferedReader(InputStreamReader(sock.inputStream, Charsets.UTF_8))
@@ -170,7 +187,7 @@ object Hub {
         fun w(o: JSONObject) { os.write((o.toString() + "\n").toByteArray()); os.flush() }
 
         val hello = JSONObject().put("t", "hello").put("id", store.deviceId)
-            .put("name", android.os.Build.MODEL ?: "Android")
+            .put("name", store.deviceName)
         store.secret?.let { hello.put("secret", it) } ?: hello.put("token", store.token ?: "")
         w(hello)
 
@@ -182,10 +199,36 @@ object Hub {
             first.optString("host").takeIf { it.isNotEmpty() }?.let { store.pcName = it }
         }
 
-        while (out.tryReceive().isSuccess) { /* drop stale events from before we connected */ }
+        while (out.tryReceive().isSuccess) { /* drop stale events */ }
         conn.value = Conn.On(host)
         lastBattery = null
+
         val writer = launch { for (m in out) w(m) }
+
+        // Dedicated coalescing motion loop at ~80Hz (12ms)
+        val motionWriter = launch {
+            while (isActive) {
+                var dx = 0
+                var dy = 0
+                var sc = 0
+                synchronized(motionLock) {
+                    dx = pendingDx
+                    dy = pendingDy
+                    sc = pendingScroll
+                    pendingDx = 0
+                    pendingDy = 0
+                    pendingScroll = 0
+                }
+                if (dx != 0 || dy != 0) {
+                    w(JSONObject().put("t", "mouse.move").put("dx", dx).put("dy", dy))
+                }
+                if (sc != 0) {
+                    w(JSONObject().put("t", "mouse.scroll").put("dy", sc))
+                }
+                delay(12)
+            }
+        }
+
         send("cmd.list")
         try {
             while (true) {
@@ -194,6 +237,12 @@ object Hub {
             }
         } finally {
             writer.cancel()
+            motionWriter.cancel()
+            synchronized(motionLock) {
+                pendingDx = 0
+                pendingDy = 0
+                pendingScroll = 0
+            }
             cancelAllReceives()
             runCatching { sock.close() }
             coroutineContext.cancelChildren()

@@ -105,11 +105,15 @@ impl Input {
 
     pub fn mouse_move(&mut self, dx: i32, dy: i32) -> Result<()> {
         let (dx, dy) = (dx.clamp(-2000, 2000), dy.clamp(-2000, 2000));
+        let mut events = Vec::with_capacity(2);
         if dx != 0 {
-            self.rel(RelativeAxisType::REL_X, dx)?;
+            events.push(InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_X.0, dx));
         }
         if dy != 0 {
-            self.rel(RelativeAxisType::REL_Y, dy)?;
+            events.push(InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_Y.0, dy));
+        }
+        if !events.is_empty() {
+            self.dev.emit(&events)?;
         }
         Ok(())
     }
@@ -156,6 +160,79 @@ impl Input {
         self.key_event(k, false)?;
         for m in ms.iter().rev() {
             self.key_event(*m, false)?;
+        }
+        Ok(())
+    }
+
+    /// Type a single ASCII character directly through uinput virtual keyboard.
+    pub fn type_char(&mut self, c: char) -> Result<()> {
+        let (key, shift) = match c {
+            'a'..='z' => (LETTERS[(c as u8 - b'a') as usize], false),
+            'A'..='Z' => (LETTERS[(c as u8 - b'A') as usize], true),
+            '0' => (Key::KEY_0, false),
+            '1' => (Key::KEY_1, false),
+            '2' => (Key::KEY_2, false),
+            '3' => (Key::KEY_3, false),
+            '4' => (Key::KEY_4, false),
+            '5' => (Key::KEY_5, false),
+            '6' => (Key::KEY_6, false),
+            '7' => (Key::KEY_7, false),
+            '8' => (Key::KEY_8, false),
+            '9' => (Key::KEY_9, false),
+            ' ' => (Key::KEY_SPACE, false),
+            '\n' => (Key::KEY_ENTER, false),
+            '\t' => (Key::KEY_TAB, false),
+            '\x08' => (Key::KEY_BACKSPACE, false),
+            '-' => (Key::KEY_MINUS, false),
+            '_' => (Key::KEY_MINUS, true),
+            '=' => (Key::KEY_EQUAL, false),
+            '+' => (Key::KEY_EQUAL, true),
+            '[' => (Key::KEY_LEFTBRACE, false),
+            '{' => (Key::KEY_LEFTBRACE, true),
+            ']' => (Key::KEY_RIGHTBRACE, false),
+            '}' => (Key::KEY_RIGHTBRACE, true),
+            ';' => (Key::KEY_SEMICOLON, false),
+            ':' => (Key::KEY_SEMICOLON, true),
+            '\'' => (Key::KEY_APOSTROPHE, false),
+            '"' => (Key::KEY_APOSTROPHE, true),
+            '`' => (Key::KEY_GRAVE, false),
+            '~' => (Key::KEY_GRAVE, true),
+            '\\' => (Key::KEY_BACKSLASH, false),
+            '|' => (Key::KEY_BACKSLASH, true),
+            ',' => (Key::KEY_COMMA, false),
+            '<' => (Key::KEY_COMMA, true),
+            '.' => (Key::KEY_DOT, false),
+            '>' => (Key::KEY_DOT, true),
+            '/' => (Key::KEY_SLASH, false),
+            '?' => (Key::KEY_SLASH, true),
+            '!' => (Key::KEY_1, true),
+            '@' => (Key::KEY_2, true),
+            '#' => (Key::KEY_3, true),
+            '$' => (Key::KEY_4, true),
+            '%' => (Key::KEY_5, true),
+            '^' => (Key::KEY_6, true),
+            '&' => (Key::KEY_7, true),
+            '*' => (Key::KEY_8, true),
+            '(' => (Key::KEY_9, true),
+            ')' => (Key::KEY_0, true),
+            _ => return Err(anyhow!("unsupported char: {c}")),
+        };
+
+        if shift {
+            self.key_event(Key::KEY_LEFTSHIFT, true)?;
+        }
+        self.key_event(key, true)?;
+        self.key_event(key, false)?;
+        if shift {
+            self.key_event(Key::KEY_LEFTSHIFT, false)?;
+        }
+        Ok(())
+    }
+
+    /// Type a string of ASCII characters directly through uinput.
+    pub fn type_str(&mut self, s: &str) -> Result<()> {
+        for c in s.chars() {
+            self.type_char(c)?;
         }
         Ok(())
     }

@@ -333,7 +333,24 @@ async fn on_msg(st: &Arc<State>, id: &str, tx: &mpsc::Sender<Value>, files: &mut
         In::MouseButton { button, down } => with_input(&mut |i| i.mouse_button(&button, down)),
         In::Scroll { dx, dy } => with_input(&mut |i| i.scroll(dx, dy)),
         In::Key { key, mods } => with_input(&mut |i| i.key(&key, &mods)),
-        In::Text { text } => sys::type_text(&text).await,
+        In::Text { text } => {
+            let mut all_typed = false;
+            if text.chars().all(|c| c.is_ascii()) {
+                with_input(&mut |i| {
+                    if let Ok(()) = i.type_str(&text) {
+                        all_typed = true;
+                    }
+                    Ok(())
+                });
+            }
+            if !all_typed {
+                if !sys::try_wtype(&text).await {
+                    sys::clip_set(&text).await;
+                    tokio::time::sleep(tokio::time::Duration::from_millis(40)).await;
+                    with_input(&mut |i| i.key("v", &["ctrl".to_string()]));
+                }
+            }
+        }
         In::Media { action } => sys::media(&action),
         In::Volume { action } => sys::volume(&action),
         In::Brightness { action } => sys::brightness(&action),

@@ -83,16 +83,20 @@ pub fn brightness(action: &str) {
     }
 }
 
-pub async fn type_text(text: &str) {
-    // wtype handles unicode (Persian included)
+pub async fn try_wtype(text: &str) -> bool {
+    // wtype handles unicode (Persian included) if installed
     let t: String = text.chars().take(2000).collect();
-    let _ = Command::new("wtype")
+    match Command::new("wtype")
         .arg("--")
         .arg(t)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
-        .await;
+        .await
+    {
+        Ok(s) => s.success(),
+        Err(_) => false,
+    }
 }
 
 pub async fn clip_get() -> String {

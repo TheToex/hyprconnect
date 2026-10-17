@@ -159,13 +159,9 @@ def save_battery_cache(pct, charging):
 class HyprConnectTray:
     def __init__(self):
         self.icon_dir = self._locate_icon_dir()
-        tray_svg = os.path.join(self.icon_dir, "hyprconnect-tray.svg")
-        if os.path.exists(tray_svg):
-            self.online_icon = tray_svg
-        else:
-            online_png = os.path.join(self.icon_dir, "hyprconnect.png")
-            self.online_icon = online_png if os.path.exists(online_png) else os.path.join(self.icon_dir, "hyprconnect.svg")
-        self.offline_icon = self.online_icon
+        self.icon_name = "hyprconnect-tray-white"
+        self.online_icon = self.icon_name
+        self.offline_icon = self.icon_name
 
         self.last_battery = None
         self.last_charging = False
@@ -173,13 +169,31 @@ class HyprConnectTray:
         if cached and cached[0] is not None:
             self.last_battery, self.last_charging = cached
 
-        self.indicator = appindicator.Indicator.new(
-            "hyprconnect",
-            self.online_icon,
-            appindicator.IndicatorCategory.APPLICATION_STATUS
-        )
+        try:
+            self.indicator = appindicator.Indicator.new_with_path(
+                "hyprconnect",
+                self.icon_name,
+                appindicator.IndicatorCategory.APPLICATION_STATUS,
+                self.icon_dir
+            )
+        except Exception:
+            self.indicator = appindicator.Indicator.new(
+                "hyprconnect",
+                self.icon_name,
+                appindicator.IndicatorCategory.APPLICATION_STATUS
+            )
+
+        try:
+            self.indicator.set_icon_theme_path(self.icon_dir)
+        except Exception:
+            pass
+
         self.indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
         self.indicator.set_title("HyprConnect")
+        try:
+            self.indicator.set_icon_full(self.icon_name, "HyprConnect")
+        except Exception:
+            pass
 
         self.current_device = None
         self.is_connected = False
@@ -189,17 +203,17 @@ class HyprConnectTray:
         GLib.timeout_add_seconds(2, self.update_status)
 
     def _locate_icon_dir(self):
-        candidates = [
-            os.path.join(os.path.dirname(__file__), "..", "icons"),
-            os.path.expanduser("~/.local/share/hyprconnect/icons"),
-            os.path.expanduser("~/.local/share/icons/hicolor/128x128/apps"),
-            "/tmp/hyprconnect-icons"
-        ]
-        for c in candidates:
-            if (os.path.exists(os.path.join(c, "hyprconnect-tray.svg")) or
-                os.path.exists(os.path.join(c, "hyprconnect.png")) or
-                os.path.exists(os.path.join(c, "hyprconnect.svg"))):
-                return os.path.abspath(c)
+        # Ensure white tray icon exists in ~/.local/share/hyprconnect/icons
+        target_dir = os.path.expanduser("~/.local/share/hyprconnect/icons")
+        os.makedirs(target_dir, exist_ok=True)
+        white_svg = os.path.join(target_dir, "hyprconnect-tray-white.svg")
+        if not os.path.exists(white_svg):
+            try:
+                with open(white_svg, "w") as f:
+                    f.write(SVG_ONLINE)
+            except Exception:
+                pass
+        return target_dir
 
         # Fallback: write embedded SVGs
         target_dir = os.path.expanduser("~/.local/share/hyprconnect/icons")

@@ -43,8 +43,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerInputChange
@@ -86,6 +90,7 @@ val MochaYellow = Color(0xFFF9E2AF)
 val MochaRed = Color(0xFFF38BA8)
 val MochaPeach = Color(0xFFFAB387)
 val MochaSapphire = Color(0xFF74C7EC)
+val MochaPink = Color(0xFFF5C2E7)
 
 val HyprColorScheme = darkColorScheme(
     primary = HyprSky,
@@ -521,11 +526,189 @@ fun TabIcon(tab: Int, selected: Boolean) {
     }
 }
 
+// ───────────────────────── Sidebar (Drawer) Unified Vector Icon Pack
+@Composable
+fun DrawerLaptopIcon(color: Color = MochaSubtext) {
+    Canvas(Modifier.size(18.dp)) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(w * 0.12f, h * 0.12f),
+            size = Size(w * 0.76f, h * 0.58f),
+            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+            style = Stroke(width = 1.8.dp.toPx())
+        )
+        drawLine(
+            color = color,
+            start = Offset(w * 0.04f, h * 0.82f),
+            end = Offset(w * 0.96f, h * 0.82f),
+            strokeWidth = 2.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+@Composable
+fun DrawerPairIcon(color: Color = MochaSubtext) {
+    Canvas(Modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(w * 0.10f, h * 0.08f),
+            size = Size(w * 0.50f, h * 0.84f),
+            cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx()),
+            style = Stroke(width = 1.8.dp.toPx())
+        )
+        drawLine(
+            color = color,
+            start = Offset(w * 0.80f, h * 0.35f),
+            end = Offset(w * 0.80f, h * 0.65f),
+            strokeWidth = 1.8.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = color,
+            start = Offset(w * 0.65f, h * 0.50f),
+            end = Offset(w * 0.95f, h * 0.50f),
+            strokeWidth = 1.8.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+@Composable
+fun DrawerUnpairIcon(color: Color = MochaRed) {
+    Canvas(Modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        drawCircle(
+            color = color,
+            radius = w * 0.44f,
+            center = Offset(w * 0.5f, h * 0.5f),
+            style = Stroke(width = 1.8.dp.toPx())
+        )
+        val p = w * 0.32f
+        drawLine(
+            color = color,
+            start = Offset(p, p),
+            end = Offset(w - p, h - p),
+            strokeWidth = 1.8.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = color,
+            start = Offset(w - p, p),
+            end = Offset(p, h - p),
+            strokeWidth = 1.8.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+@Composable
+fun DrawerSettingsIcon(color: Color = MochaSubtext) {
+    Canvas(Modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        val cx = w * 0.5f
+        val cy = h * 0.5f
+        drawCircle(
+            color = color,
+            radius = w * 0.20f,
+            center = Offset(cx, cy),
+            style = Stroke(width = 1.8.dp.toPx())
+        )
+        for (i in 0 until 6) {
+            val rad = Math.toRadians(i * 60.0)
+            val rIn = w * 0.26f
+            val rOut = w * 0.44f
+            val cos = Math.cos(rad).toFloat()
+            val sin = Math.sin(rad).toFloat()
+            drawLine(
+                color = color,
+                start = Offset(cx + rIn * cos, cy + rIn * sin),
+                end = Offset(cx + rOut * cos, cy + rOut * sin),
+                strokeWidth = 2.2.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+        }
+    }
+}
+
+@Composable
+fun DrawerDonationIcon(color: Color = MochaPink) {
+    Canvas(Modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        val heartPath = Path().apply {
+            moveTo(w * 0.5f, h * 0.82f)
+            cubicTo(w * 0.12f, h * 0.56f, w * 0.04f, h * 0.28f, w * 0.26f, h * 0.16f)
+            cubicTo(w * 0.38f, h * 0.10f, w * 0.46f, h * 0.22f, w * 0.50f, h * 0.30f)
+            cubicTo(w * 0.54f, h * 0.22f, w * 0.62f, h * 0.10f, w * 0.74f, h * 0.16f)
+            cubicTo(w * 0.96f, h * 0.28f, w * 0.88f, h * 0.56f, w * 0.50f, h * 0.82f)
+            close()
+        }
+        drawPath(heartPath, color = color, style = Stroke(width = 1.8.dp.toPx()))
+    }
+}
+
+@Composable
+fun DrawerAboutIcon(color: Color = MochaSubtext) {
+    Canvas(Modifier.size(20.dp)) {
+        val w = size.width
+        val h = size.height
+        val cx = w * 0.5f
+        val cy = h * 0.5f
+        drawCircle(
+            color = color,
+            radius = w * 0.44f,
+            center = Offset(cx, cy),
+            style = Stroke(width = 1.8.dp.toPx())
+        )
+        drawCircle(
+            color = color,
+            radius = 1.2.dp.toPx(),
+            center = Offset(cx, h * 0.30f)
+        )
+        drawLine(
+            color = color,
+            start = Offset(cx, h * 0.44f),
+            end = Offset(cx, h * 0.72f),
+            strokeWidth = 1.8.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+@Composable
+fun DrawerCloseIcon(color: Color = MochaSubtext) {
+    Canvas(Modifier.size(10.dp)) {
+        val w = size.width
+        val h = size.height
+        drawLine(color = color, start = Offset(0f, 0f), end = Offset(w, h), strokeWidth = 1.6.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(color = color, start = Offset(w, 0f), end = Offset(0f, h), strokeWidth = 1.6.dp.toPx(), cap = StrokeCap.Round)
+    }
+}
+
+@Composable
+fun DrawerMenuIcon(color: Color = MochaText) {
+    Canvas(Modifier.size(18.dp)) {
+        val w = size.width
+        val h = size.height
+        val stroke = 1.8.dp.toPx()
+        drawLine(color = color, start = Offset(0f, h * 0.22f), end = Offset(w, h * 0.22f), strokeWidth = stroke, cap = StrokeCap.Round)
+        drawLine(color = color, start = Offset(0f, h * 0.50f), end = Offset(w, h * 0.50f), strokeWidth = stroke, cap = StrokeCap.Round)
+        drawLine(color = color, start = Offset(0f, h * 0.78f), end = Offset(w, h * 0.78f), strokeWidth = stroke, cap = StrokeCap.Round)
+    }
+}
+
 @Composable
 fun DrawerItem(
-    icon: String,
     label: String,
     textColor: Color = MochaText,
+    icon: @Composable () -> Unit,
     onClick: () -> Unit
 ) {
     Surface(
@@ -538,7 +721,9 @@ fun DrawerItem(
             Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(icon, fontSize = 20.sp)
+            Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
+                icon()
+            }
             Spacer(Modifier.width(14.dp))
             Text(label, color = textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
@@ -680,7 +865,7 @@ fun MainScreen(onUnpair: () -> Unit) {
                                     .padding(horizontal = 10.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("💻", fontSize = 16.sp)
+                                DrawerLaptopIcon(color = if (isActive) HyprSky else MochaSubtext)
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -714,7 +899,7 @@ fun MainScreen(onUnpair: () -> Unit) {
                                     onClick = { deviceToDelete = dev },
                                     modifier = Modifier.size(24.dp)
                                 ) {
-                                    Text("✕", color = MochaSubtext, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    DrawerCloseIcon(color = MochaSubtext)
                                 }
                             }
                         }
@@ -724,8 +909,8 @@ fun MainScreen(onUnpair: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
 
                 DrawerItem(
-                    icon = "➕",
                     label = "Pair New Device",
+                    icon = { DrawerPairIcon() },
                     onClick = {
                         scope.launch { drawerState.close() }
                         showPairNewDialog = true
@@ -734,9 +919,9 @@ fun MainScreen(onUnpair: () -> Unit) {
 
                 if (Hub.store.hasPairing) {
                     DrawerItem(
-                        icon = "✕",
                         label = "Unpair Current PC",
                         textColor = MochaRed,
+                        icon = { DrawerUnpairIcon() },
                         onClick = {
                             scope.launch { drawerState.close() }
                             showUnpairConfirm = true
@@ -756,8 +941,8 @@ fun MainScreen(onUnpair: () -> Unit) {
                 )
 
                 DrawerItem(
-                    icon = "⚙",
                     label = "Settings",
+                    icon = { DrawerSettingsIcon() },
                     onClick = {
                         scope.launch { drawerState.close() }
                         showSettingsDialog = true
@@ -776,8 +961,8 @@ fun MainScreen(onUnpair: () -> Unit) {
                 )
 
                 DrawerItem(
-                    icon = "💖",
                     label = "Donation",
+                    icon = { DrawerDonationIcon() },
                     onClick = {
                         scope.launch { drawerState.close() }
                         val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://thetoex.github.io/donate/"))
@@ -786,8 +971,8 @@ fun MainScreen(onUnpair: () -> Unit) {
                 )
 
                 DrawerItem(
-                    icon = "ℹ",
                     label = "About HyprConnect",
+                    icon = { DrawerAboutIcon() },
                     onClick = {
                         scope.launch { drawerState.close() }
                         showAboutDialog = true
@@ -862,7 +1047,7 @@ fun MainScreen(onUnpair: () -> Unit) {
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Text("☰", fontSize = 24.sp, color = MochaText)
+                            DrawerMenuIcon(color = MochaText)
                         }
                     },
                     actions = {

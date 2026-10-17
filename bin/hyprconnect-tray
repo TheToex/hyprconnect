@@ -136,12 +136,38 @@ def update_item(item, label, icon_name=None):
         item.set_image(img)
         item.set_always_show_image(True)
 
+def load_battery_cache():
+    p = os.path.expanduser("~/.cache/hyprconnect/battery_cache.json")
+    try:
+        if os.path.exists(p):
+            with open(p, "r") as f:
+                d = json.load(f)
+                return d.get("pct"), d.get("charging", False)
+    except Exception:
+        pass
+    return None
+
+def save_battery_cache(pct, charging):
+    p = os.path.expanduser("~/.cache/hyprconnect/battery_cache.json")
+    try:
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w") as f:
+            json.dump({"pct": pct, "charging": charging}, f)
+    except Exception:
+        pass
+
 class HyprConnectTray:
     def __init__(self):
         self.icon_dir = self._locate_icon_dir()
         online_png = os.path.join(self.icon_dir, "hyprconnect.png")
         self.online_icon = online_png if os.path.exists(online_png) else os.path.join(self.icon_dir, "hyprconnect.svg")
         self.offline_icon = self.online_icon
+
+        self.last_battery = None
+        self.last_charging = False
+        cached = load_battery_cache()
+        if cached and cached[0] is not None:
+            self.last_battery, self.last_charging = cached
 
         self.indicator = appindicator.Indicator.new(
             "hyprconnect",
@@ -253,12 +279,18 @@ class HyprConnectTray:
             if bat and bat.get("pct") is not None:
                 pct = bat.get("pct")
                 chg = bat.get("charging", False)
-                chg_str = " (Charging)" if chg else ""
-                update_item(self.item_battery, f"Battery: {pct}%{chg_str}", "battery-symbolic")
+                self.last_battery = pct
+                self.last_charging = chg
+                save_battery_cache(pct, chg)
+
+            if self.last_battery is not None:
+                chg_str = " (Charging)" if self.last_charging else ""
+                update_item(self.item_battery, f"Battery: {self.last_battery}%{chg_str}", "battery-symbolic")
                 self.item_battery.set_visible(True)
-                tooltip = f"HyprConnect: {name} ({pct}%)"
+                tooltip = f"HyprConnect: {name} ({self.last_battery}%)"
             else:
-                self.item_battery.set_visible(False)
+                update_item(self.item_battery, "Battery: Syncing...", "battery-symbolic")
+                self.item_battery.set_visible(True)
                 tooltip = f"HyprConnect: {name}"
 
             update_item(self.item_status, "Wi-Fi Connected", "network-wireless-symbolic")

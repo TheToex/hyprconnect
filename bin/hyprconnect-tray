@@ -159,8 +159,12 @@ def save_battery_cache(pct, charging):
 class HyprConnectTray:
     def __init__(self):
         self.icon_dir = self._locate_icon_dir()
-        online_png = os.path.join(self.icon_dir, "hyprconnect.png")
-        self.online_icon = online_png if os.path.exists(online_png) else os.path.join(self.icon_dir, "hyprconnect.svg")
+        tray_svg = os.path.join(self.icon_dir, "hyprconnect-tray.svg")
+        if os.path.exists(tray_svg):
+            self.online_icon = tray_svg
+        else:
+            online_png = os.path.join(self.icon_dir, "hyprconnect.png")
+            self.online_icon = online_png if os.path.exists(online_png) else os.path.join(self.icon_dir, "hyprconnect.svg")
         self.offline_icon = self.online_icon
 
         self.last_battery = None
@@ -192,7 +196,9 @@ class HyprConnectTray:
             "/tmp/hyprconnect-icons"
         ]
         for c in candidates:
-            if os.path.exists(os.path.join(c, "hyprconnect.png")) or os.path.exists(os.path.join(c, "hyprconnect.svg")):
+            if (os.path.exists(os.path.join(c, "hyprconnect-tray.svg")) or
+                os.path.exists(os.path.join(c, "hyprconnect.png")) or
+                os.path.exists(os.path.join(c, "hyprconnect.svg"))):
                 return os.path.abspath(c)
 
         # Fallback: write embedded SVGs

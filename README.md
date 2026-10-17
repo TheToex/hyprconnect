@@ -1,92 +1,220 @@
-# HyprConnect
+<div align="center">
 
-یه جایگزین مستقل از صفر شبیه KDE Connect برای Hyprland. پروتکل، دیمن و اپ اندروید همه مال خودشونه (با KDE Connect سازگار نیست).
+  <img src="icons/hyprconnect.svg" width="112" height="112" alt="HyprConnect Logo" />
+
+  # HyprConnect
+
+  **Wayland-native remote control and desktop companion tailored specifically for Hyprland.**
+
+  [![Version](https://img.shields.io/badge/version-1.0.0-89dceb?style=for-the-badge)](https://github.com/TheToex/hyprconnect/releases)
+  [![Rust](https://img.shields.io/badge/daemon-Rust-orange?style=for-the-badge&logo=rust)](daemon/)
+  [![Android](https://img.shields.io/badge/app-Kotlin%20%7C%20Compose-3DDC84?style=for-the-badge&logo=android)](android/)
+  [![Hyprland](https://img.shields.io/badge/compositor-Hyprland-00c3ff?style=for-the-badge)](https://hyprland.org)
+  [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+  [![Donate](https://img.shields.io/badge/Donate-Support%20Project-ea76cb?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://thetoex.github.io/donate/)
+
+</div>
+
+---
+
+## 📖 Overview
+
+**HyprConnect** is an independent, lightweight, ground-up companion that bridges your Android smartphone and your Linux desktop running the **Hyprland** Wayland compositor. 
+
+Unlike traditional solutions, HyprConnect has **zero KDE dependencies** and is built specifically for Wayland and Hyprland's native architecture. It features a blazing-fast, secure Rust daemon, a sleek StatusNotifierItem system tray applet, and a modern Android application designed with Jetpack Compose in the **Catppuccin Mocha** palette.
+
+---
+
+## ✨ Features
+
+### 📱 Remote Input & Trackpad
+- **Ultra-Low Latency Trackpad**: Coalesced ~200Hz packet streaming for buttery smooth pointer motion, tap-to-click, secondary click, and dual-finger scroll.
+- **Kernel-Level Input Injection**: Uses Linux `/dev/uinput` for direct hardware-level mouse and keyboard event dispatch.
+- **Live Typing**: Real-time keystroke transmission directly to active Wayland windows with full Unicode and multi-language support.
+
+### 📽 Presentation Remote & Gyro Laser
+- **Slide Controls**: Fullscreen, Next Slide, Previous Slide, and Black Screen shortcuts.
+- **Virtual Laser Pointer**: Turn your phone into an interactive pointer—uses device gyroscope sensors to project a smooth, non-intrusive translucent laser dot over Hyprland via a native transparent Wayland layer.
+- **Presentation Timer**: Clean, free-running presentation stopwatch to keep you on schedule.
+
+### 🪟 Hyprland Workspace & Window Integration
+- **Real-time Event Streaming**: Subscribes directly to Hyprland's IPC UNIX socket (`$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock`).
+- **Workspace Navigation**: Instant one-touch switching between active and empty workspaces (1 to 4).
+- **Window Focusing**: Browse currently open windows and focus them on your desktop with a single tap.
+
+### 🪞 Live Screen Mirroring (Phone → PC)
+- Live wireless projection of your Android screen into a dedicated floating, hardware-accelerated Wayland window (`hyprconnect-mirror`).
+- High-efficiency streaming with automatic dimension scaling and low network footprint.
+
+### 🎵 Media & Brightness Control
+- **MPRIS Player Integration**: Full multimedia playback controls (Play/Pause, Next, Previous, Volume) via `playerctl` and PipeWire/WirePlumber (`wpctl`).
+- **Synchronized Screen Brightness**: Real-time synchronization of current laptop display brightness using `brightnessctl`.
+
+### 📁 Bi-Directional High-Speed File Transfer
+- Stream files (documents, images, videos up to 8GB) seamlessly between phone and PC with progress tracking.
+- Automatic destination directory handling (`~/Downloads/hyprconnect`).
+
+### 📋 Clipboard & Notification Sync
+- **Shared Clipboard**: Instant bidirectional copy-paste synchronization powered by `wl-clipboard`.
+- **Desktop Notification Relay**: Phone alerts, incoming calls, and text messages forwarded natively to your desktop notification daemon (AGS, SwayNC, Dunst, Mako) with the custom HyprConnect logo.
+- **SMS from Desktop**: Send SMS text messages through your phone directly from the CLI or system tray.
+
+### 🛎 StatusNotifierItem System Tray Applet
+- Modern tray icon matching the crisp white Hyprland origami branding.
+- Live battery percentage indicator with charging state detection.
+- Right-click quick menu for file dispatch, SMS composer, clipboard push, and instant QR pairing.
+
+---
+
+## 🔒 Security Architecture
+
+- **End-to-End TLS**: All traffic is encrypted with TLS 1.3 using `rustls`.
+- **Zero Cloud Reliance**: Works completely within your local network (Wi-Fi, hotspot, or USB tethering).
+- **Anti-MITM Certificate Pinning**: The daemon generates a local cryptographic certificate. The pairing QR code encodes its SHA-256 fingerprint; the phone strictly verifies and pins this certificate.
+- **Time-Limited Pairing**: Pairing tokens are 16-byte cryptographically secure random values expiring in 120 seconds.
+- **Safe Protocol Boundaries**: Strict line size limits, path sanitization against directory traversal, and hashed credentials (`0600` permissions on secret stores).
+
+---
+
+## 📦 Project Structure
 
 ```
 hyprconnect/
-├── daemon/          Rust: دیمن + CLI (یک باینری: `hyprconnect`)
-├── android/         Kotlin + Jetpack Compose (باید توی Android Studio بیلد بشه)
-├── linux-extras/    قانون udev و سرویس systemd
-└── bin/             باینری آماده x86_64 (ساخته‌شده روی Ubuntu 24.04)
+├── daemon/          # Rust daemon & CLI engine (single binary: hyprconnect)
+├── android/         # Android app (Kotlin, Jetpack Compose, Material 3)
+├── bin/             # Helper scripts (laser overlay, mirror player, system tray)
+├── icons/           # Multi-size PNGs and scalable SVG vectors
+└── linux-extras/    # udev rules and systemd service templates
 ```
 
-## امکانات
+---
 
-| قابلیت | وضعیت |
-|---|---|
-| جفت‌سازی با QR، TLS با پین‌کردن گواهی، توکن یک‌بارمصرف | تست‌شده (دیمن) |
-| انتقال فایل دو طرفه (جریانی، تا ۸GB) | سمت دیمن تست‌شده |
-| تاچ‌پد (حرکت، کلیک، راست‌کلیک، اسکرول) + کیبورد (متن یونیکد/فارسی با `wtype` + کلیدهای خاص) | پیاده‌سازی شده |
-| ریموت ارائه: قبلی/بعدی، F5، Esc، صفحه سیاه، کلیدهای صدا، تایمر | پیاده‌سازی شده |
-| پوینتر با ژیروسکوپ (نشانگر ماوس با کج کردن گوشی حرکت می‌کنه) | پیاده‌سازی شده |
-| Hyprland: لیست و سوییچ ورک‌اسپیس، لیست و فوکوس پنجره‌ها (event socket زنده) | پیاده‌سازی شده |
-| مدیا (playerctl)، صدا (wpctl)، روشنایی (brightnessctl) | پیاده‌سازی شده |
-| کامندهای از پیش تعریف‌شده (`config.json`) | پیاده‌سازی شده |
-| کلیپ‌بورد دو طرفه (wl-clipboard) | پیاده‌سازی شده |
-| نوتیفیکیشن‌های گوشی روی دسکتاپ | پیاده‌سازی شده |
-| پیامک: ارسال از PC و فوروارد پیامک دریافتی به دسکتاپ | پیاده‌سازی شده |
-| باتری گوشی، پیدا کردن گوشی (ring) | پیاده‌سازی شده |
-| کشف خودکار با mDNS وقتی IP عوض شد | پیاده‌سازی شده |
+## 🚀 Getting Started (Linux)
 
-## نصب سمت لینوکس
+### 1. Install Dependencies
+
+#### Arch Linux
+```bash
+sudo pacman -S --needed \
+    rust cargo \
+    wtype playerctl brightnessctl wl-clipboard libnotify qrencode \
+    python python-gobject gtk3 libayatana-appindicator
+```
+
+### 2. Configure `uinput` Permissions
+
+HyprConnect uses `/dev/uinput` to inject touch and key events without needing root privileges at runtime.
 
 ```bash
-sudo pacman -S wtype playerctl brightnessctl wl-clipboard libnotify
-# اختیاری: grim (اسکرین‌شات)، hyprlock (قفل)
-
+# Install udev rule
 sudo install -Dm644 linux-extras/99-hyprconnect-uinput.rules /etc/udev/rules.d/
-sudo usermod -aG input $USER          # بعدش یک بار logout/login
-sudo udevadm control --reload && sudo modprobe uinput
+
+# Add your user to the input group
+sudo usermod -aG input $USER
+
+# Load uinput module automatically
 echo uinput | sudo tee /etc/modules-load.d/uinput.conf
+sudo modprobe uinput
+sudo udevadm control --reload && sudo udevadm trigger
+```
+> [!NOTE]
+> Log out and log back in for the new `input` group membership to take effect.
 
-install -Dm755 bin/hyprconnect ~/.local/bin/hyprconnect
-# یا از سورس:  cd daemon && cargo build --release
+### 3. Build & Install Daemon
+
+```bash
+# Build release binary
+cd daemon
+cargo build --release
+
+# Install binary and helper scripts
+install -Dm755 target/release/hyprconnect ~/.local/bin/hyprconnect
+install -Dm755 ../bin/hyprconnect-tray ~/.local/bin/hyprconnect-tray
+
+# Install icons
+mkdir -p ~/.local/share/hyprconnect/icons ~/.local/share/icons/hicolor/scalable/apps
+cp ../icons/* ~/.local/share/hyprconnect/icons/
+cp ../icons/hyprconnect.svg ~/.local/share/icons/hicolor/scalable/apps/hyprconnect.svg
+gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor 2>/dev/null || true
 ```
 
-توی `~/.config/hypr/hyprland.conf`:
+### 4. Hyprland Configuration
 
-```
+Add HyprConnect to your `~/.config/hypr/hyprland.conf` to launch automatically upon login:
+
+```ini
 exec-once = hyprconnect daemon
 ```
-(دیمن همون‌جا محیط Wayland/Hyprland رو ارث می‌بره. نسخه‌ی systemd: `linux-extras/hyprconnect.service`.)
 
-پورت `5716/tcp` رو برای شبکه‌ی محلی توی فایروال باز کن (برای جلوگیری از تداخل با KDE Connect).
-
-## استفاده
-
+Make sure TCP port `5716` is permitted on your local firewall (if active):
 ```bash
-hyprconnect pair            # QR نشون می‌ده، توی اپ اسکن کن (۲ دقیقه اعتبار)
-hyprconnect devices
-hyprconnect send file.pdf
-hyprconnect ring
-hyprconnect sms +98912xxxxxxx "سلام"
-hyprconnect clip            # کلیپ‌بورد PC -> گوشی
-hyprconnect unpair <id>
+sudo ufw allow in proto tcp to any port 5716 comment 'HyprConnect daemon'
 ```
 
-کامندهای قابل اجرا از گوشی: `~/.config/hyprconnect/config.json` → `commands`. گوشی فقط **اسم** کامند رو می‌فرسته، نه رشته‌ی شل.
+---
 
-## بیلد اپ اندروید
+## 📱 Android App Setup
 
-1. پوشه‌ی `android/` رو توی Android Studio باز کن و Sync بزن (Gradle و SDK رو خودش می‌گیره).
-2. Run روی گوشی یا Build → Build APK(s).
-3. minSdk 29 (اندروید ۱۰+). اسکنر QR به Google Play Services نیاز داره؛ بدونش لینک `hyprconnect://…` رو دستی paste کن.
-4. دسترسی نوتیفیکیشن و پیامک رو از تب More فعال کن.
-5. برای پایدار موندن اتصال، بهینه‌سازی باتری رو برای اپ خاموش کن.
+1. Grab the latest `app-debug.apk` from the **[Releases](https://github.com/TheToex/hyprconnect/releases)** tab (or open `android/` in Android Studio and run `./gradlew assembleDebug`).
+2. Install the APK on your Android device (Android 10+ / API 29+ recommended).
+3. Ensure both devices are on the same local network (Wi-Fi or phone Hotspot).
+4. Run `hyprconnect pair` in your terminal (or choose **Pair New Device** from the desktop system tray) and scan the QR code using the app.
+5. Grant notification and SMS permissions in the app's settings if you wish to relay alerts.
 
-## مدل امنیتی
+---
 
-- دیمن یه گواهی self-signed می‌سازه؛ QR فینگرپرینت SHA-256 اون رو می‌رسونه و گوشی فقط همون گواهی رو قبول می‌کنه (ضد MITM).
-- توکن جفت‌سازی ۱۶ بایت تصادفیِ یک‌بارمصرف با ۲ دقیقه اعتبار. بعدش هر گوشی یه secret ۳۲ بایتی می‌گیره (روی PC فقط هش SHA-256 ذخیره می‌شه).
-- نام فایل‌های دریافتی پاکسازی می‌شن (path traversal تست شد)، خطوط پروتکل سقف اندازه دارن، احراز هویت ناموفق ۱ ثانیه تأخیر می‌خوره.
-- کلید خصوصی و devices.json با دسترسی 0600 ذخیره می‌شن.
-- گوشی گم شد؟ `hyprconnect unpair <id>`.
+## 💻 CLI Reference
 
-## محدودیت‌های نسخه‌ی ۰.۱
+```text
+USAGE:
+  hyprconnect daemon              Run the background daemon & auto-spawn tray
+  hyprconnect tray                Run the system tray applet standalone
+  hyprconnect pair                Display an ASCII QR code to pair a device (valid 2 min)
+  hyprconnect devices             List paired devices, live connection, and battery level
+  hyprconnect send <file>         Send a file to the active phone
+  hyprconnect sms <number> <text> Send an SMS through the phone
+  hyprconnect clip                Push desktop clipboard to the phone
+  hyprconnect unpair <device-id>  Forget a paired device
+```
 
-- **نقطه‌ی لیزری روی صفحه** نیست: پوینتر ژیروسکوپی خودِ نشانگر ماوس رو حرکت می‌ده. overlay واقعی با `wlr-layer-shell` کار بعدیه.
-- درگ با ماوس (نگه‌داشتن کلیک) توی UI نیست؛ پروتکل `mouse.button` رو داره.
-- پیامک: ارسال و دریافت هست، لیست مکالمات و چت نیست. دسترسی SMS برای Google Play محدودیت داره (برای APK شخصی مشکلی نیست).
-- نوتیفیکیشن‌ها یک‌طرفه‌ان (گوشی → PC).
-- اندروید ۱۰+ نوشتن کلیپ‌بورد از پس‌زمینه رو محدود می‌کنه؛ «PC → phone» وقتی اپ جلوئه کار می‌کنه.
-- سمت اندروید هنوز روی گوشی واقعی اجرا نشده.
+---
+
+## ⚙️ Custom Desktop Commands
+
+You can configure desktop commands executable from your phone in `~/.config/hyprconnect/config.json`:
+
+```json
+{
+  "port": 5716,
+  "download_dir": "/home/toex/Downloads/hyprconnect",
+  "commands": {
+    "Lock Screen": "hyprlock",
+    "Take Screenshot": "grim - | wl-copy",
+    "Suspend System": "systemctl suspend"
+  }
+}
+```
+*The phone only references the command by title; raw shell strings are never transmitted over the network.*
+
+---
+
+## 💖 Support & Donation
+
+If you find **HyprConnect** useful and want to support ongoing development, consider buying a coffee or contributing to project maintenance:
+
+<div align="center">
+
+  [![Donate](https://img.shields.io/badge/Donate-Support%20HyprConnect-ea76cb?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://thetoex.github.io/donate/)
+
+  👉 **[https://thetoex.github.io/donate/](https://thetoex.github.io/donate/)**
+
+</div>
+
+Every bit of support is greatly appreciated!
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+Feel free to contribute, open issues, or submit pull requests!

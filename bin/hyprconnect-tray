@@ -109,10 +109,10 @@ def notify(summary, body="", icon=None):
         pass
 
 SVG_ONLINE = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
-  <!-- Hyprland Origami Logo (HyprSky #89DCEB & #74C7EC) -->
-  <path fill="#89DCEB" d="M 12,1 L 1.2,23 L 7.2,23 L 12,12.2 Z" />
-  <path fill="#74C7EC" d="M 12,1 L 12,12.2 L 16.8,23 L 22.8,23 Z" />
-  <path fill="#89DCEB" d="M 12,12.2 L 8.4,18.7 L 15.6,18.7 Z" />
+  <!-- Hyprland Origami Logo (Crisp White #FFFFFF & Subtle Tone #CDD6F4) -->
+  <path fill="#FFFFFF" d="M 12,1 L 1.2,23 L 7.2,23 L 12,12.2 Z" />
+  <path fill="#CDD6F4" d="M 12,1 L 12,12.2 L 16.8,23 L 22.8,23 Z" />
+  <path fill="#FFFFFF" d="M 12,12.2 L 8.4,18.7 L 15.6,18.7 Z" />
 </svg>"""
 
 SVG_OFFLINE = SVG_ONLINE
@@ -226,10 +226,6 @@ class HyprConnectTray:
         self.item_battery.set_visible(False)
         self.menu.append(self.item_battery)
 
-        self.item_status = make_menu_item("Waiting for connection...", "network-wireless-symbolic")
-        self.item_status.set_sensitive(False)
-        self.menu.append(self.item_status)
-
         self.menu.append(Gtk.SeparatorMenuItem())
 
         # 2. Actions
@@ -293,8 +289,6 @@ class HyprConnectTray:
                 self.item_battery.set_visible(True)
                 tooltip = f"HyprConnect: {name}"
 
-            update_item(self.item_status, "Wi-Fi Connected", "network-wireless-symbolic")
-
             self.item_send.set_sensitive(True)
             self.item_sms.set_sensitive(True)
             self.item_clip.set_sensitive(True)
@@ -306,7 +300,6 @@ class HyprConnectTray:
             self.indicator.set_icon_full(self.online_icon, "HyprConnect - Disconnected")
             update_item(self.item_device, "No Phone Connected", "phone-symbolic")
             self.item_battery.set_visible(False)
-            update_item(self.item_status, "Waiting for connection...", "network-wireless-symbolic")
 
             self.item_send.set_sensitive(False)
             self.item_sms.set_sensitive(False)

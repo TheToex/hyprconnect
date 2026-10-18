@@ -17,7 +17,7 @@
 
 ---
 
-## 📖 Overview
+##  Overview
 
 **HyprConnect** is an independent, lightweight, ground-up companion that bridges your Android smartphone and your Linux desktop running the **Hyprland** Wayland compositor. 
 
@@ -25,48 +25,48 @@ Unlike traditional solutions, HyprConnect has **zero KDE dependencies** and is b
 
 ---
 
-## ✨ Features
+##  Features
 
 ### 📱 Remote Input & Trackpad
 - **Ultra-Low Latency Trackpad**: Coalesced ~200Hz packet streaming for buttery smooth pointer motion, tap-to-click, secondary click, and dual-finger scroll.
 - **Kernel-Level Input Injection**: Uses Linux `/dev/uinput` for direct hardware-level mouse and keyboard event dispatch.
 - **Live Typing**: Real-time keystroke transmission directly to active Wayland windows with full Unicode and multi-language support.
 
-### 📽 Presentation Remote & Gyro Laser
+###  Presentation Remote & Gyro Laser
 - **Slide Controls**: Fullscreen, Next Slide, Previous Slide, and Black Screen shortcuts.
 - **Virtual Laser Pointer**: Turn your phone into an interactive pointer—uses device gyroscope sensors to project a smooth, non-intrusive translucent laser dot over Hyprland via a native transparent Wayland layer.
 - **Presentation Timer**: Clean, free-running presentation stopwatch to keep you on schedule.
 
-### 🪟 Hyprland Workspace & Window Integration
+###  Hyprland Workspace & Window Integration
 - **Real-time Event Streaming**: Subscribes directly to Hyprland's IPC UNIX socket (`$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock`).
 - **Workspace Navigation**: Instant one-touch switching between active and empty workspaces (1 to 4).
 - **Window Focusing**: Browse currently open windows and focus them on your desktop with a single tap.
 
-### 🪞 Live Screen Mirroring (Phone → PC)
+###  Live Screen Mirroring (Phone → PC)
 - Live wireless projection of your Android screen into a dedicated floating, hardware-accelerated Wayland window (`hyprconnect-mirror`).
 - High-efficiency streaming with automatic dimension scaling and low network footprint.
 
-### 🎵 Media & Brightness Control
+###  Media & Brightness Control
 - **MPRIS Player Integration**: Full multimedia playback controls (Play/Pause, Next, Previous, Volume) via `playerctl` and PipeWire/WirePlumber (`wpctl`).
 - **Synchronized Screen Brightness**: Real-time synchronization of current laptop display brightness using `brightnessctl`.
 
-### 📁 Bi-Directional High-Speed File Transfer
+###  Bi-Directional High-Speed File Transfer
 - Stream files (documents, images, videos up to 8GB) seamlessly between phone and PC with progress tracking.
 - Automatic destination directory handling (`~/Downloads/hyprconnect`).
 
-### 📋 Clipboard & Notification Sync
+###  Clipboard & Notification Sync
 - **Shared Clipboard**: Instant bidirectional copy-paste synchronization powered by `wl-clipboard`.
 - **Desktop Notification Relay**: Phone alerts, incoming calls, and text messages forwarded natively to your desktop notification daemon (AGS, SwayNC, Dunst, Mako) with the custom HyprConnect logo.
 - **SMS from Desktop**: Send SMS text messages through your phone directly from the CLI or system tray.
 
-### 🛎 StatusNotifierItem System Tray Applet
+###  StatusNotifierItem System Tray Applet
 - Modern tray icon matching the crisp white Hyprland origami branding.
 - Live battery percentage indicator with charging state detection.
 - Right-click quick menu for file dispatch, SMS composer, clipboard push, and instant QR pairing.
 
 ---
 
-## 🔒 Security Architecture
+##  Security Architecture
 
 - **End-to-End TLS**: All traffic is encrypted with TLS 1.3 using `rustls`.
 - **Zero Cloud Reliance**: Works completely within your local network (Wi-Fi, hotspot, or USB tethering).
@@ -76,7 +76,7 @@ Unlike traditional solutions, HyprConnect has **zero KDE dependencies** and is b
 
 ---
 
-## 📦 Project Structure
+##  Project Structure
 
 ```
 hyprconnect/
@@ -89,9 +89,9 @@ hyprconnect/
 
 ---
 
-## 🚀 Getting Started (Linux)
+##  Getting Started (Linux)
 
-### ⚡ One-Line Automatic Install (Recommended)
+###  One-Line Automatic Install (Recommended)
 
 Run this single command in your terminal to automatically verify dependencies, build the daemon, configure `/dev/uinput`, and install desktop launchers and icons:
 
@@ -212,7 +212,7 @@ You can configure desktop commands executable from your phone in `~/.config/hypr
 
 ---
 
-## 💖 Support & Donation
+##  Support & Donation
 
 If you find **HyprConnect** useful and want to support ongoing development, consider buying a coffee or contributing to project maintenance:
 
@@ -228,7 +228,7 @@ Every bit of support is greatly appreciated!
 
 ---
 
-## 📄 License
+##  License
 
 This project is licensed under the [MIT License](LICENSE).
 Feel free to contribute, open issues, or submit pull requests!

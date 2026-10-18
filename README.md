@@ -27,7 +27,7 @@ Unlike traditional solutions, HyprConnect has **zero KDE dependencies** and is b
 
 ##  Features
 
-### 📱 Remote Input & Trackpad
+###  Remote Input & Trackpad
 - **Ultra-Low Latency Trackpad**: Coalesced ~200Hz packet streaming for buttery smooth pointer motion, tap-to-click, secondary click, and dual-finger scroll.
 - **Kernel-Level Input Injection**: Uses Linux `/dev/uinput` for direct hardware-level mouse and keyboard event dispatch.
 - **Live Typing**: Real-time keystroke transmission directly to active Wayland windows with full Unicode and multi-language support.
@@ -167,7 +167,7 @@ sudo ufw allow in proto tcp to any port 5716 comment 'HyprConnect daemon'
 
 ---
 
-## 📱 Android App Setup
+##  Android App Setup
 
 1. Grab the latest `app-debug.apk` from the **[Releases](https://github.com/TheToex/hyprconnect/releases)** tab (or open `android/` in Android Studio and run `./gradlew assembleDebug`).
 2. Install the APK on your Android device (Android 10+ / API 29+ recommended).
@@ -177,7 +177,7 @@ sudo ufw allow in proto tcp to any port 5716 comment 'HyprConnect daemon'
 
 ---
 
-## 💻 CLI Reference
+##  CLI Reference
 
 ```text
 USAGE:
@@ -193,7 +193,7 @@ USAGE:
 
 ---
 
-## ⚙️ Custom Desktop Commands
+##  Custom Desktop Commands
 
 You can configure desktop commands executable from your phone in `~/.config/hyprconnect/config.json`:
 
@@ -220,7 +220,7 @@ If you find **HyprConnect** useful and want to support ongoing development, cons
 
   [![Donate](https://img.shields.io/badge/Donate-Support%20HyprConnect-ea76cb?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://thetoex.github.io/donate/)
 
-  👉 **[https://thetoex.github.io/donate/](https://thetoex.github.io/donate/)**
+   **[https://thetoex.github.io/donate/](https://thetoex.github.io/donate/)**
 
 </div>
 
